@@ -26,6 +26,10 @@ limitations under the License.
 #include "frontends/p4/typeMap.h"
 #include "frontends/p4/typeChecking/bindVariables.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
+
+//P4box
+#include "p4box.h"
+
 // Passes
 #include "actionsInlining.h"
 #include "createBuiltins.h"
@@ -121,6 +125,8 @@ const IR::P4Program *FrontEnd::run(const CompilerOptions &options, const IR::P4P
         new PrettyPrint(options),
         // Simple checks on parsed program
         new ValidateParsedProgram(),
+        //P4box
+        new P4boxSetup(),
         // Synthesize some built-in constructs
         new CreateBuiltins(),
         new ResolveReferences(&refMap, true),  // check shadowing

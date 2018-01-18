@@ -244,6 +244,22 @@ class Type_Struct : Type_StructLike {
     toString{ return cstring("struct ") + externalName(); }
 }
 
+
+//P4box
+class Type_ProtectedStruct : Type_StructLike {
+#nodbprint
+    toString{ return cstring("protected struct ") + externalName(); }    
+}
+
+
+//P4box
+class Type_Monitor : Type_Declaration {
+#nodbprint
+    cstring controlBlockName;
+    ParameterList monitorParams;
+}
+
+
 class Type_HeaderUnion : Type_StructLike {
 #nodbprint
     toString{ return cstring("header_union ") + externalName(); }
@@ -290,6 +306,7 @@ abstract Type_ArchBlock : Type_Declaration, IMayBeGenericType, IAnnotated {
     Annotations getAnnotations() const override { return annotations; }
     TypeParameters getTypeParameters() const override { return typeParameters; }
 }
+
 
 class Type_Package : Type_ArchBlock, IContainer {
     ParameterList constructorParams;

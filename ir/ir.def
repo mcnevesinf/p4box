@@ -55,6 +55,21 @@
   constructors both with and without an argument for that field.
  */
 
+//P4box
+class P4Monitor : Declaration {
+    Type_Monitor  type;
+    IndexedVector<MonitorProperty> properties;
+    toString { return cstring("monitor ") + externalName(); }
+#nodbprint
+}
+
+    //Type_Control                                type;
+    //optional ParameterList                      constructorParams = new ParameterList;
+    //optional inline IndexedVector<Declaration>  controlLocals;
+    //BlockStatement                              body;
+
+
+
 class ParserState : ISimpleNamespace, Declaration, IAnnotated {
     optional Annotations                        annotations = Annotations::empty;
     optional inline IndexedVector<StatOrDecl>   components;
@@ -79,6 +94,7 @@ class ParserState : ISimpleNamespace, Declaration, IAnnotated {
                       "%1%: unexpected select expression", selectExpression);
     }
 }
+
 
 // A parser that contains all states (unlike the P4 v1.0 parser, which is really just a state)
 class P4Parser : Type_Declaration, ISimpleNamespace, IApply, IContainer {
@@ -258,6 +274,37 @@ class EntriesList : PropertyValue {
     dbprint { out << "{ " << entries << "}"; }
 }
 
+//P4box
+abstract MonitorPropertyValue { }
+
+//P4box
+class MonitorLocal : MonitorPropertyValue {
+    inline IndexedVector<Declaration> monitorLocals;
+#nodbprint
+}
+
+
+//P4box
+class MonitorParserBegin : MonitorPropertyValue {
+    inline IndexedVector<ParserState> parserStates;
+#nodbprint
+}
+
+
+//P4box
+class MonitorParserEnd : MonitorPropertyValue {
+    inline IndexedVector<ParserState> parserStates;
+#nodbprint
+}
+
+
+//P4box
+class MonitorProperty : Declaration {
+    MonitorPropertyValue value;
+#nodbprint
+}
+
+
 class Property : Declaration, IAnnotated {
     optional Annotations   annotations = Annotations::empty;
     PropertyValue value;
@@ -434,6 +481,21 @@ class BlockStatement : Statement, ISimpleNamespace, IAnnotated {
     void push_back(StatOrDecl st) { components.push_back(st); }
     Annotations getAnnotations() const override { return annotations; }
 }
+
+
+//P4box
+class MonitorControlBegin : MonitorPropertyValue {
+    inline BlockStatement body; 
+#nodbprint
+}
+
+
+//P4box
+class MonitorControlEnd : MonitorPropertyValue {
+    inline BlockStatement body;
+#nodbprint
+}
+
 
 class MethodCallStatement : Statement {
     MethodCallExpression methodCall;

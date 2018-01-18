@@ -60,6 +60,7 @@ set (P4_FRONTEND_SRCS
   p4/unusedDeclarations.cpp
   p4/uselessCasts.cpp
   p4/validateParsedProgram.cpp
+  p4/p4box.cpp
   )
 
 set (P4_FRONTEND_HDRS
@@ -114,6 +115,7 @@ set (P4_FRONTEND_HDRS
   p4/unusedDeclarations.h
   p4/uselessCasts.h
   p4/validateParsedProgram.h
+  p4/p4box.h
   )
 
 

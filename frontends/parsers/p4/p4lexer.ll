@@ -69,7 +69,9 @@ using Parser = P4::P4Parser;
 "abstract"      { BEGIN(NORMAL); return Parser::make_ABSTRACT(driver.yylloc); }
 "action"        { BEGIN(NORMAL); return Parser::make_ACTION(driver.yylloc); }
 "actions"       { BEGIN(NORMAL); return Parser::make_ACTIONS(driver.yylloc); }
+"after"		{ BEGIN(NORMAL); return Parser::make_AFTER(driver.yylloc); } //P4box
 "apply"         { BEGIN(NORMAL); return Parser::make_APPLY(driver.yylloc); }
+"before"	{ BEGIN(NORMAL); return Parser::make_BEFORE(driver.yylloc); } //P4box
 "bool"          { BEGIN(NORMAL); return Parser::make_BOOL(driver.yylloc); }
 "bit"           { BEGIN(NORMAL); return Parser::make_BIT(driver.yylloc); }
 "const"         { BEGIN(NORMAL); return Parser::make_CONST(driver.yylloc); }
@@ -89,10 +91,14 @@ using Parser = P4::P4Parser;
 "inout"         { BEGIN(NORMAL); return Parser::make_INOUT(driver.yylloc); }
 "int"           { BEGIN(NORMAL); return Parser::make_INT(driver.yylloc); }
 "key"           { BEGIN(NORMAL); return Parser::make_KEY(driver.yylloc); }
+"local"		{ BEGIN(NORMAL); return Parser::make_LOCAL(driver.yylloc); } //P4box
 "match_kind"    { BEGIN(NORMAL); return Parser::make_MATCH_KIND(driver.yylloc); }
+"monitor"	{ BEGIN(NORMAL); return Parser::make_MONITOR(driver.yylloc); } //P4box
+"on"		{ BEGIN(NORMAL); return Parser::make_ON(driver.yylloc); } //P4box
 "out"           { BEGIN(NORMAL); return Parser::make_OUT(driver.yylloc); }
 "parser"        { BEGIN(NORMAL); return Parser::make_PARSER(driver.yylloc); }
 "package"       { BEGIN(NORMAL); return Parser::make_PACKAGE(driver.yylloc); }
+"protected"     { BEGIN(NORMAL); return Parser::make_PROTECTED(driver.yylloc); } //P4box
 "return"        { BEGIN(NORMAL); return Parser::make_RETURN(driver.yylloc); }
 "select"        { BEGIN(NORMAL); return Parser::make_SELECT(driver.yylloc); }
 "state"         { BEGIN(NORMAL); return Parser::make_STATE(driver.yylloc); }
