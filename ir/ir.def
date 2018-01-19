@@ -285,14 +285,14 @@ class MonitorLocal : MonitorPropertyValue {
 
 
 //P4box
-class MonitorParserBegin : MonitorPropertyValue {
+class MonitorParserBefore : MonitorPropertyValue {
     inline IndexedVector<ParserState> parserStates;
 #nodbprint
 }
 
 
 //P4box
-class MonitorParserEnd : MonitorPropertyValue {
+class MonitorParserAfter : MonitorPropertyValue {
     inline IndexedVector<ParserState> parserStates;
 #nodbprint
 }
@@ -484,14 +484,14 @@ class BlockStatement : Statement, ISimpleNamespace, IAnnotated {
 
 
 //P4box
-class MonitorControlBegin : MonitorPropertyValue {
+class MonitorControlBefore : MonitorPropertyValue {
     inline BlockStatement body; 
 #nodbprint
 }
 
 
 //P4box
-class MonitorControlEnd : MonitorPropertyValue {
+class MonitorControlAfter : MonitorPropertyValue {
     inline BlockStatement body;
 #nodbprint
 }

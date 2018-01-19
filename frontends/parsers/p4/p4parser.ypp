@@ -431,17 +431,17 @@ monitorProperty
         { auto v = new IR::MonitorLocal(*$4);  
           $$ = new IR::MonitorProperty(@4, "monitor control local", v); }
     | BEFORE "=" blockStatement
-        { auto v = new IR::MonitorControlBegin(*$3);
-          $$ = new IR::MonitorProperty(@3, "monitor control begin", v); }
+        { auto v = new IR::MonitorControlBefore(*$3);
+          $$ = new IR::MonitorProperty(@3, "monitor control before", v); }
     | BEFORE name "=" "{" parserStates "}"
-        { auto v = new IR::MonitorParserBegin(*$5);
-          $$ = new IR::MonitorProperty(@5, "monitor parser begin", v); }
+        { auto v = new IR::MonitorParserBefore(*$5);
+          $$ = new IR::MonitorProperty(@5, "monitor parser before", v); }
     | AFTER "=" controlBody
-        { auto v = new IR::MonitorControlEnd(*$3);
-          $$ = new IR::MonitorProperty(@3, "monitor control end", v); }
+        { auto v = new IR::MonitorControlAfter(*$3);
+          $$ = new IR::MonitorProperty(@3, "monitor control after", v); }
     | AFTER name "=" "{" parserStates "}"
-        { auto v = new IR::MonitorParserEnd(*$5);
-          $$ = new IR::MonitorProperty(@5, "monitor parser end", v); }
+        { auto v = new IR::MonitorParserAfter(*$5);
+          $$ = new IR::MonitorProperty(@5, "monitor parser after", v); }
     ;
 
 

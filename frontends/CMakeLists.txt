@@ -60,7 +60,11 @@ set (P4_FRONTEND_SRCS
   p4/unusedDeclarations.cpp
   p4/uselessCasts.cpp
   p4/validateParsedProgram.cpp
-  p4/p4box.cpp
+  p4/getSupervisorNodes.cpp
+  p4/getCandidateStructs.cpp
+  p4/insertProtectedState.cpp
+  p4/insertDataPlaneMonitors.cpp
+  p4/mapP4boxNames.cpp
   )
 
 set (P4_FRONTEND_HDRS
