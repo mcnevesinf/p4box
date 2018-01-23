@@ -23,6 +23,8 @@ std::vector<const IR::IDeclaration*>*
 ResolutionContext::resolve(IR::ID name, P4::ResolutionType type, bool forwardOK) const {
     static std::vector<const IR::IDeclaration*> empty;
 
+    //printf(">>>> Resolving path: %s\n", name.name.c_str());
+
     std::vector<const IR::INamespace*> toTry(stack);
     toTry.insert(toTry.end(), globals.begin(), globals.end());
 
@@ -79,6 +81,7 @@ ResolutionContext::resolve(IR::ID name, P4::ResolutionType type, bool forwardOK)
             auto decl = simple->getDeclByName(name);
             if (decl == nullptr)
                 continue;
+
             switch (type) {
                 case P4::ResolutionType::Any:
                     break;
@@ -99,7 +102,12 @@ ResolutionContext::resolve(IR::ID name, P4::ResolutionType type, bool forwardOK)
             if (!forwardOK) {
                 Util::SourceInfo nsi = name.srcInfo;
                 Util::SourceInfo dsi = decl->getNode()->srcInfo;
+
+                //printf("Name line: %s\n", nsi.toDebugString().c_str());
+                //printf("Decl line: %s\n", dsi.toDebugString().c_str());
+
                 bool before = dsi <= nsi;
+                
                 LOG2("\tPosition test:" << dsi << "<=" << nsi << "=" << before);
                 if (!before)
                     continue;

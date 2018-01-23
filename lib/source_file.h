@@ -114,8 +114,16 @@ class SourcePosition final {
         return lineNumber;
     }
 
+    void setLineNumber( unsigned newln ) {
+        this->lineNumber = newln;
+    }
+
     unsigned getColumnNumber() const {
         return columnNumber;
+    }
+
+    void setColumnNumber( unsigned newcl ) {
+        this->columnNumber = newcl;
     }
 
  private:
@@ -199,8 +207,19 @@ class SourceInfo final {
     const SourcePosition& getStart() const
     { return this->start; }
 
+    void setStart( unsigned newln, unsigned newcn ) { 
+        this->start.setLineNumber(newln);
+        this->start.setColumnNumber(newcn);
+    }
+
     const SourcePosition& getEnd() const
     { return this->end; }
+
+    void setEnd( unsigned newln, unsigned newcn ){
+        this->end.setLineNumber(newln);
+        this->end.setColumnNumber(newcn);
+    }
+
 
     /**
        True if this comes 'before' this source position.

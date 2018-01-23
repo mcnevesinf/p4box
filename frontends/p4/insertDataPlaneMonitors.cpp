@@ -15,7 +15,7 @@ const IR::Node* InsertDataPlaneMonitors::postorder(IR::P4Control* control){
     //Get control name
     std::string controlName = control->toString().c_str();
     controlName.replace(0, 8, "");
-    printf("Control: %s\n", controlName.c_str());
+    //printf("Control: %s\n", controlName.c_str());
 
     //Instruments that will be added to the program block
     IR::IndexedVector<IR::Declaration> instrumentLocals;
@@ -40,10 +40,10 @@ const IR::Node* InsertDataPlaneMonitors::postorder(IR::P4Control* control){
                 std::string propertyName = property->toString().c_str();
                 propertyName.replace(0, 16, "");
 
-                printf("Property: %s\n", propertyName.c_str());
+                //printf("Property: %s\n", propertyName.c_str());
 
                 if(propertyName == "local"){
-                    printf("Property local\n");
+                    //printf("Property local\n");
                     const IR::MonitorLocal* monitorLocal = property->value->to<IR::MonitorLocal>();
                     const IR::IndexedVector<IR::Declaration> locals = monitorLocal->monitorLocals;
 
@@ -53,7 +53,7 @@ const IR::Node* InsertDataPlaneMonitors::postorder(IR::P4Control* control){
                 } 
                 else { 
                     if (propertyName == "before"){
-                        printf("Property before\n");
+                        //printf("Property before\n");
                         const IR::MonitorControlBefore* monitorBefore = property->value->to<IR::MonitorControlBefore>();
                         const IR::IndexedVector<IR::StatOrDecl> beforeComponents = monitorBefore->body.components;
 
@@ -84,11 +84,13 @@ const IR::Node* InsertDataPlaneMonitors::postorder(IR::P4Control* control){
         IR::IndexedVector<IR::Parameter> parameters = control->type->applyParams->parameters;
 
         for( auto parameter : parameters ){
-            printf("Parameter type: %s\n", parameter->type->toString().c_str());
-            printf("Host struct type: %s\n", P4boxIR->hostStructType.c_str());
+            //TODO: remove debug code
+            //printf("Parameter type: %s\n", parameter->type->toString().c_str());
+            //printf("Host struct type: %s\n", P4boxIR->hostStructType.c_str());
             if( parameter->type->toString() == P4boxIR->hostStructType ){
-                printf("Type hosting protected state: %s\n", parameter->type->toString().c_str());
-                P4boxIR->nameMap[controlName] = parameter->type->toString().c_str();
+                //printf("Type hosting protected state: %s\n", parameter->type->toString().c_str());
+                //printf("Parameter name: %s\n", parameter->name.name.c_str());
+                P4boxIR->nameMap[controlName] = parameter->name.name.c_str();
             }
         }
     }//End if monitored block

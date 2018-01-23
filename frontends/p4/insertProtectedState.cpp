@@ -20,7 +20,7 @@ const IR::Node* InsertProtectedState::postorder(IR::Type_Struct* origStruct){
 
     if( isCandidateType ){
         if( not P4boxIR->pStateInserted ){
-            printf("Candidate struct: %s\n", structName.c_str());
+            //printf("Candidate struct: %s\n", structName.c_str());
 
             IR::IndexedVector<IR::StructField> newFields;
 
@@ -36,7 +36,7 @@ const IR::Node* InsertProtectedState::postorder(IR::Type_Struct* origStruct){
 
                 //FOR each field in the protected struct
                 for( auto pField : it->second->fields ){
-                    printf("Protected field: %s\n", pField->toString().c_str());
+                    //printf("Protected field: %s\n", pField->toString().c_str());
                     newFields.push_back( pField );
                 }
 

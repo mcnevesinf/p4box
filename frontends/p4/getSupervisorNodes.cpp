@@ -6,7 +6,8 @@ namespace P4 {
 
 const IR::Node* GetSupervisorNodes::postorder(IR::P4Program* program){
     
-    printf("Root node\n");
+    //printf("Root node\n");
+    //printf("Program node: %s\n", program->toString().c_str());
 
     const IR::IndexedVector<IR::Node> declarations = program->declarations;
     IR::IndexedVector<IR::Node> newDeclList;
@@ -58,13 +59,44 @@ const IR::Node* GetSupervisorNodes::postorder(IR::P4Program* program){
 
 
 void GetSupervisorNodes::end_apply(const IR::Node* root){
-    
-    /*FOR each monitor
-      DO get the associated block name */
+
+    /* Get block names, protected state names and source information 
+       associated with each monitor */    
+
+    //FOR each monitor
     for (std::map<cstring,const IR::P4Monitor*>::iterator it=P4boxIR->monitorMap.begin(); it!=P4boxIR->monitorMap.end(); ++it){
+
+        //Get block name
         P4boxIR->blockMap[it->first] = it->second->type->controlBlockName;
+
+        //Get protected state names
+        IR::IndexedVector<IR::Parameter> monitorParameters = it->second->type->monitorParams->parameters;
+
+        for( auto parameter : monitorParameters ){
+            //printf("Monitor parameter: %s\n", parameter->toString().c_str());
+            P4boxIR->pStateNames[it->first].push_back( parameter->toString().c_str() );
+        }
+
+        //Get source information
+        P4boxIR->monitorDeclarations[it->first] = it->second->name;
     }//End for each monitor
 
 }
 
 }//End P4 namespace
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
