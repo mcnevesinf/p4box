@@ -63,7 +63,6 @@ set (P4_FRONTEND_SRCS
   p4/getProgramDeclarations.cpp
   p4/getSupervisorNodes.cpp
   p4/resolveMonitorReferences.cpp
-  p4/removeControlBlockNames.cpp
   p4/getCandidateStructs.cpp
   p4/insertProtectedState.cpp
   p4/insertDataPlaneMonitors.cpp

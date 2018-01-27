@@ -13,7 +13,8 @@
 //#include "setup.h"
 #include "ir/ir.h"
 
-#define BLOCK_MONITOR 1
+#define CONTROL_MONITOR 1
+#define PARSER_MONITOR 2
 
 namespace P4 {
 
@@ -29,6 +30,7 @@ struct SupervisorMap {
     std::map<cstring, cstring> nameMap; //<block-name, parameter-name>
     std::map<cstring, std::vector<cstring>> pStateNames; //<monitor-name, monitor-parameters>
     bool pStateInserted;
+    int monitorStartStateCounter;
 };
 
 class GetSupervisorNodes final : public Transform {
@@ -66,6 +68,39 @@ class InsertDataPlaneMonitors final : public Transform {
     const IR::Node* postorder(IR::P4Control* control) override;
     const IR::Node* postorder(IR::MethodCallStatement* methodCall) override; 
 
+  private:
+
+    /* Functions related to the insertion of PARSER monitors */
+    void getParserMonitorData( cstring monitorName,
+                               IR::IndexedVector<IR::Declaration>* instrumentLocals,
+                               IR::IndexedVector<IR::ParserState>* instrumentBefore,
+                               IR::IndexedVector<IR::ParserState>* instrumentAfter,
+                               cstring* beforeStateName,
+                               cstring* afterStateName );
+
+    IR::IndexedVector<IR::Declaration>* instrumentParserLocals( 
+                               IR::IndexedVector<IR::Declaration> instrumentLocals,
+                               IR::IndexedVector<IR::Declaration>* parserLocals );
+
+    IR::IndexedVector<IR::ParserState>* instrumentParserBefore( 
+                               cstring beforeStateName,
+                               IR::IndexedVector<IR::ParserState> instrumentBefore,
+                               IR::IndexedVector<IR::ParserState>* newParserStateList );
+
+    IR::IndexedVector<IR::ParserState>* instrumentParserAfter(
+                               cstring afterStateName,
+                               IR::IndexedVector<IR::ParserState> instrumentAfter,
+                               IR::IndexedVector<IR::ParserState>* newParserStateList );
+
+    IR::ParserState* changeTransition( const IR::ParserState* parserState,
+                                       cstring monitoredStateName,
+                                       cstring monitorInitialState );
+
+    IR::ParserState* changeAfterTransition( 
+                               const IR::ParserState* parserState, 
+                               cstring originalStateName, 
+                               const IR::Expression* monitoredPathTransition );
+
 };
 
 
@@ -102,7 +137,7 @@ class MapP4boxNames final : public Transform {
     const IR::Node* postorder(IR::Path* origPath) override;
 //    const IR::Node* postorder(IR::Type_Name* origTypeName) override;
 //    const IR::Node* postorder(IR::PathExpression* origPathExpression) override;
-    const IR::Node* postorder(IR::Member* origMember) override;
+//    const IR::Node* postorder(IR::Member* origMember) override;
 
 };
 
@@ -186,6 +221,8 @@ class P4boxTest final : public Inspector {
 
     using Inspector::postorder;
 
+    void postorder(const IR::P4Parser* parser) override;
+    void postorder(const IR::ParserState* pstate) override;
     void postorder(const IR::Member* origMember) override;
 };
 
@@ -201,6 +238,7 @@ class P4boxSetup : public PassManager {
     
     P4boxSetup( ) {
         P4box.pStateInserted = false;
+        P4box.monitorStartStateCounter = 0;
 
         passes.push_back(new P4::GetProgramDeclarations( &P4box ));
         passes.push_back(new P4::GetSupervisorNodes( &P4box ));
@@ -211,7 +249,6 @@ class P4boxSetup : public PassManager {
         passes.push_back(new P4::InsertProtectedState( &P4box ));
         passes.push_back(new P4::InsertDataPlaneMonitors( &P4box ));
         passes.push_back(new P4::MapP4boxNames( &P4box ));
-        passes.push_back(new P4::RemoveControlBlockNames( &P4box ));
     
         passes.push_back(new P4::P4boxTest( &P4box ));
 

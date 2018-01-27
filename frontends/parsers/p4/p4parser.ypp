@@ -282,7 +282,8 @@ nonTypeName
     | ACTIONS     { $$ = new IR::ID(@1, "actions"); }
     | STATE       { $$ = new IR::ID(@1, "state"); }
     | ENTRIES     { $$ = new IR::ID(@1, "entries"); }
-    | MONITOR     { $$ = new IR::ID(@1, "monitor"); }
+//    | MONITOR     { $$ = new IR::ID(@1, "monitor"); }
+    | AFTER	  { $$ = new IR::ID(@1, "after"); }
     ;
 
 name
@@ -427,21 +428,21 @@ monitorProperty
     ;*/
 
 
-    : LOCAL "=" "{" controlLocalDeclarations "}"
-        { auto v = new IR::MonitorLocal(*$4);  
-          $$ = new IR::MonitorProperty(@4, "monitor control local", v); }
-    | BEFORE "=" blockStatement
-        { auto v = new IR::MonitorControlBefore(*$3);
-          $$ = new IR::MonitorProperty(@3, "monitor control before", v); }
-    | BEFORE name "=" "{" parserStates "}"
-        { auto v = new IR::MonitorParserBefore(*$5);
-          $$ = new IR::MonitorProperty(@5, "monitor parser before", v); }
-    | AFTER "=" controlBody
-        { auto v = new IR::MonitorControlAfter(*$3);
-          $$ = new IR::MonitorProperty(@3, "monitor control after", v); }
-    | AFTER name "=" "{" parserStates "}"
-        { auto v = new IR::MonitorParserAfter(*$5);
-          $$ = new IR::MonitorProperty(@5, "monitor parser after", v); }
+    : LOCAL "{" controlLocalDeclarations "}"
+        { auto v = new IR::MonitorLocal(*$3);  
+          $$ = new IR::MonitorProperty(@3, "monitor control local", v); }
+    | BEFORE blockStatement
+        { auto v = new IR::MonitorControlBefore(*$2);
+          $$ = new IR::MonitorProperty(@2, "monitor control before", v); }
+    | BEFORE name "{" parserStates "}"
+        { auto v = new IR::MonitorParserBefore(*$2, *$4);
+          $$ = new IR::MonitorProperty(@4, "monitor parser before", v); }
+    | AFTER blockStatement
+        { auto v = new IR::MonitorControlAfter(*$2);
+          $$ = new IR::MonitorProperty(@2, "monitor control after", v); }
+    | AFTER name "{" parserStates "}"
+        { auto v = new IR::MonitorParserAfter(*$2, *$4);
+          $$ = new IR::MonitorProperty(@4, "monitor parser after", v); }
     ;
 
 

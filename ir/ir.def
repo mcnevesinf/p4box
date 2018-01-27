@@ -286,6 +286,7 @@ class MonitorLocal : MonitorPropertyValue {
 
 //P4box
 class MonitorParserBefore : MonitorPropertyValue {
+    cstring stateName;
     inline IndexedVector<ParserState> parserStates;
 #nodbprint
 }
@@ -293,6 +294,7 @@ class MonitorParserBefore : MonitorPropertyValue {
 
 //P4box
 class MonitorParserAfter : MonitorPropertyValue {
+    cstring stateName;
     inline IndexedVector<ParserState> parserStates;
 #nodbprint
 }
