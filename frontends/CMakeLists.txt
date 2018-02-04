@@ -62,10 +62,12 @@ set (P4_FRONTEND_SRCS
   p4/validateParsedProgram.cpp
   p4/getProgramDeclarations.cpp
   p4/getSupervisorNodes.cpp
+  p4/validateSupervisor.cpp
   p4/resolveMonitorReferences.cpp
   p4/getCandidateStructs.cpp
   p4/insertProtectedState.cpp
   p4/insertDataPlaneMonitors.cpp
+  p4/insertExternMonitors.cpp
   p4/mapP4boxNames.cpp
   p4/p4boxTest.cpp
   )

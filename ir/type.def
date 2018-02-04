@@ -255,8 +255,26 @@ class Type_ProtectedStruct : Type_StructLike {
 //P4box
 class Type_Monitor : Type_Declaration {
 #nodbprint
-    cstring controlBlockName;
+//    cstring controlBlockName;
+    MonitoredBlock monitoredBlock;
     ParameterList monitorParams;
+}
+
+
+//P4box
+class MonitoredBlock {
+#nodbprint
+    MonitoredBlockName blockName;
+    cstring specialization;
+}
+
+
+//P4box
+class MonitoredBlockName {
+#nodbprint
+    cstring monitoredBlockName;
+    //cstring monitoredBlockType;
+    optional Vector<Type> typeArguments = new Vector<Type>;
 }
 
 

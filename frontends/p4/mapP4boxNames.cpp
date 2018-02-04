@@ -81,9 +81,6 @@ const IR::Node* MapP4boxNames::postorder(IR::Path* origPath){
         }//End if found block name
 
         //Map P4box name
-        //TODO: remove debug code
-        //printf("Original path name: %s\n", origPath->toString().c_str());
-
         auto newPath = new IR::Path( IR::ID( origPath->name.srcInfo , mappingName ) );
 
         return newPath;

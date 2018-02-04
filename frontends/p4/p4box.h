@@ -11,7 +11,12 @@
 #include <algorithm>
 
 //#include "setup.h"
+#include "createBuiltins.h"
+#include "directCalls.h"
+#include "frontends/common/resolveReferences/resolveReferences.h"
+#include "frontends/common/constantFolding.h"
 #include "ir/ir.h"
+#include "typeChecking/typeChecker.h"
 
 #define CONTROL_MONITOR 1
 #define PARSER_MONITOR 2
@@ -24,6 +29,11 @@ struct SupervisorMap {
     std::map<cstring, IR::ID> monitorDeclarations; //<monitor-name, line/column-number>
     std::map<cstring, cstring> blockMap; //<monitor-name, block-name>
     std::map<cstring, IR::ID> programDeclarations; //<block-name, line/column-number>
+    std::vector<cstring> parserMembers; //Parsers in a program
+    std::vector<cstring> controlMembers; //Control blocks in a program
+    std::vector<cstring> externMembers; //Extern functions in a program
+    std::map<cstring, std::vector<cstring>> associatedTypes; //<extern-monitor-name, associated-types>
+    std::map<cstring, cstring> associatedBlocks; //<extern-monitor-name, associated-block>
     std::map<cstring, int> monitorTypeMap; //<monitor-name, monitor-type>
     std::vector<cstring> candidateTypes;
     cstring hostStructType;
@@ -66,7 +76,6 @@ class InsertDataPlaneMonitors final : public Transform {
 
     const IR::Node* postorder(IR::P4Parser* parser) override;
     const IR::Node* postorder(IR::P4Control* control) override;
-    const IR::Node* postorder(IR::MethodCallStatement* methodCall) override; 
 
   private:
 
@@ -174,6 +183,24 @@ class RemoveControlBlockNames : public Transform {
 };
 
 
+class InsertExternMonitors : public Transform {
+
+    SupervisorMap *P4boxIR;
+    TypeMap *auxTypeMap;
+
+  public:
+    InsertExternMonitors( SupervisorMap *map, TypeMap *typeMap ) { 
+	setName("InsertExternMonitors"); 
+        P4boxIR = map;
+        auxTypeMap = typeMap;
+    }
+
+    using Transform::postorder;
+
+    const IR::Node* postorder(IR::MethodCallStatement* origCall) override;
+};
+
+
 class GetProgramDeclarations final : public Inspector {
 
     SupervisorMap *P4boxIR;
@@ -188,6 +215,7 @@ class GetProgramDeclarations final : public Inspector {
 
     void postorder(const IR::P4Parser* parser) override;
     void postorder(const IR::P4Control* control) override;
+    void postorder(const IR::Method* method) override;
 };
 
 
@@ -209,6 +237,23 @@ class ResolveMonitorReferences final : public Inspector {
 };
 
 
+class ValidateSupervisor final : public Inspector {
+
+    SupervisorMap *P4boxIR;
+
+  public:
+    ValidateSupervisor( SupervisorMap *map ) { 
+	setName("ValidateSupervisor"); 
+        P4boxIR = map;
+    }
+
+    using Inspector::postorder;
+
+    void postorder(const IR::MonitoredBlock* mBlock) override;
+    void postorder(const IR::Type_Monitor* monitor) override;
+};
+
+
 class P4boxTest final : public Inspector {
 
     SupervisorMap *P4boxIR;
@@ -224,6 +269,7 @@ class P4boxTest final : public Inspector {
     void postorder(const IR::P4Parser* parser) override;
     void postorder(const IR::ParserState* pstate) override;
     void postorder(const IR::Member* origMember) override;
+    void postorder(const IR::P4Control* control) override;
 };
 
 
@@ -233,20 +279,38 @@ class P4boxSetup : public PassManager {
 
  private:
     SupervisorMap P4box;
+    SupervisorMap auxP4box;
+    ReferenceMap  auxRefMap;
+    TypeMap       auxTypeMap;
 
  public:
     
-    P4boxSetup( ) {
+    P4boxSetup( const IR::P4Program auxProgram ) {
         P4box.pStateInserted = false;
         P4box.monitorStartStateCounter = 0;
+  
+        PassManager auxPasses = {
+            new GetSupervisorNodes( &auxP4box ),
+            new CreateBuiltins(),
+            new ResolveReferences( &auxRefMap ),
+            new ConstantFolding( &auxRefMap, nullptr ),
+            new InstantiateDirectCalls( &auxRefMap ),
+            new ResolveReferences( &auxRefMap ),
+            new TypeInference(&auxRefMap, &auxTypeMap, false)
+        };
+  
+        auxProgram.apply(auxPasses);
 
         passes.push_back(new P4::GetProgramDeclarations( &P4box ));
+        passes.push_back(new P4::ValidateSupervisor( &P4box ));
         passes.push_back(new P4::GetSupervisorNodes( &P4box ));
         passes.push_back(new P4::ResolveMonitorReferences( &P4box ));
         /* Must keep this order because name maps are built when 
            instrumenting programs with data plane monitors and protected state */
         passes.push_back(new P4::GetCandidateStructs( &P4box ));
         passes.push_back(new P4::InsertProtectedState( &P4box ));
+
+        passes.push_back(new P4::InsertExternMonitors( &P4box, &auxTypeMap ));
         passes.push_back(new P4::InsertDataPlaneMonitors( &P4box ));
         passes.push_back(new P4::MapP4boxNames( &P4box ));
     
@@ -261,4 +325,4 @@ class P4boxSetup : public PassManager {
 } //End P4 namespace
 
 
-#endif /* _P4_SUPERVISORSETUP_H_ */
+#endif /* _P4_BOX_H_ */

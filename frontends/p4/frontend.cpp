@@ -126,7 +126,7 @@ const IR::P4Program *FrontEnd::run(const CompilerOptions &options, const IR::P4P
         // Simple checks on parsed program
         new ValidateParsedProgram(),
         //P4box
-        new P4boxSetup(),
+        new P4boxSetup( *program ),
         // Synthesize some built-in constructs
         new CreateBuiltins(),
         new ResolveReferences(&refMap, true),  // check shadowing

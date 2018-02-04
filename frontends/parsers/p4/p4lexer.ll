@@ -71,6 +71,7 @@ using Parser = P4::P4Parser;
 "actions"       { BEGIN(NORMAL); return Parser::make_ACTIONS(driver.yylloc); }
 "after"		{ BEGIN(NORMAL); return Parser::make_AFTER(driver.yylloc); } //P4box
 "apply"         { BEGIN(NORMAL); return Parser::make_APPLY(driver.yylloc); }
+"at"		{ BEGIN(NORMAL); return Parser::make_ATT(driver.yylloc); } //P4box
 "before"	{ BEGIN(NORMAL); return Parser::make_BEFORE(driver.yylloc); } //P4box
 "bool"          { BEGIN(NORMAL); return Parser::make_BOOL(driver.yylloc); }
 "bit"           { BEGIN(NORMAL); return Parser::make_BIT(driver.yylloc); }

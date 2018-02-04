@@ -145,7 +145,7 @@ typedef const IR::Type ConstType;
 %token      MASK "&&&"
 %token      RANGE ".."
 %token      TRUE FALSE THIS
-%token      ABSTRACT ACTION ACTIONS AFTER APPLY BEFORE BOOL BIT CONST CONTROL DATA DEFAULT
+%token      ABSTRACT ACTION ACTIONS AFTER APPLY ATT BEFORE BOOL BIT CONST CONTROL DATA DEFAULT
             ELSE ENTRIES ENUM ERROR EXIT EXTERN HEADER HEADER_UNION IF IN INOUT
             INT KEY LOCAL SELECT MATCH_KIND MONITOR ON OUT PACKAGE PARSER PROTECTED RETURN 
             STATE STRUCT SWITCH TABLE TRANSITION TUPLE TYPEDEF VARBIT VOID
@@ -154,6 +154,7 @@ typedef const IR::Type ConstType;
 %token<UnparsedConstant>  INTEGER
 
 %type<IR::ID*>              name nonTypeName
+%type<IR::ID*>		    monitorSpecialization //P4box
 %type<IR::Direction>        direction
 %type<IR::Path*>            prefixedNonTypeName prefixedType
 %type<IR::IndexedVector<IR::Type_Var>*>  typeParameterList
@@ -207,6 +208,9 @@ typedef const IR::Type ConstType;
 %type<IR::Type_Parser*>     parserTypeDeclaration
 %type<IR::Type_Control*>    controlTypeDeclaration
 %type<IR::Type_Monitor*>    monitorTypeDeclaration //P4box
+%type<IR::MonitoredBlock*>  monitoredBlock //P4box
+%type<IR::MonitoredBlockName*> monitoredBlockName //P4box
+%type<IR::Vector<IR::Type>*> typedMonitorBlock //P4box
 %type<IR::IndexedVector<IR::Declaration>*>  parserLocalElements controlLocalDeclarations
 %type<IR::StructField*>     structField
 %type<IR::IndexedVector<IR::StructField>*>  structFieldList
@@ -394,11 +398,48 @@ monitorDeclaration
     ;
 
 
-monitorTypeDeclaration
+/*monitorTypeDeclaration
     : MONITOR name "(" parameterList ")" ON name
         { auto pl = new IR::ParameterList(@4, *$4);
           $$ = new IR::Type_Monitor(@2, *$2, *$7, pl); }
+    ;*/
+
+
+monitorTypeDeclaration
+    : MONITOR name "(" parameterList ")" ON monitoredBlock
+        { auto pl = new IR::ParameterList(@4, *$4);
+          $$ = new IR::Type_Monitor(@2, *$2, $7, pl); }
     ;
+
+
+monitoredBlock
+    : monitoredBlockName monitorSpecialization
+        { $$ = new IR::MonitoredBlock(@1, $1, $2->name); }
+    ;
+
+
+monitoredBlockName
+    : name typedMonitorBlock
+        { $$ = new IR::MonitoredBlockName(@1, $1->name, $2); }
+    ;
+
+
+/*typedMonitorBlock
+    : { $$ = new IR::ID("M_NO_TYPE"); }
+    | "<" name ">" { $$ = $2; }
+    ;*/
+
+typedMonitorBlock
+    : /* empty */ { $$ = new IR::Vector<IR::Type>(); }
+    | "<" typeArgumentList ">" { $$ = $2; }
+    ;
+
+
+monitorSpecialization
+    : /* empty */ { $$ = new IR::ID("M_NO_SPEC"); }
+    | ATT name	{ $$ = $2; }
+    ;
+
 
 monitorPropertyList
     : monitorProperty			  { $$ = new IR::IndexedVector<IR::MonitorProperty>();

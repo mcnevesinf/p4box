@@ -21,6 +21,13 @@ void GetCandidateStructs::postorder(const IR::P4Control* control){
         }
     }
 
+    /* Check blocks that are associated with extern monitors */
+    for(std::map<cstring,cstring>::iterator it=P4boxIR->associatedBlocks.begin(); it!=P4boxIR->associatedBlocks.end(); it++){
+        if( it->second == controlName ){
+            monitoredBlock = true;
+        }
+    }
+
     /* Update list of structs that can be instrumented with P4box protected state */
     if( monitoredBlock ){
         IR::IndexedVector<IR::Parameter> blockParameters = control->type->applyParams->parameters;

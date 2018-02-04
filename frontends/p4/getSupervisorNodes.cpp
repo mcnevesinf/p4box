@@ -5,7 +5,7 @@
 namespace P4 {
 
 const IR::Node* GetSupervisorNodes::postorder(IR::P4Program* program){
-    
+
     //printf("Root node\n");
     //printf("Program node: %s\n", program->toString().c_str());
 
@@ -67,7 +67,30 @@ void GetSupervisorNodes::end_apply(const IR::Node* root){
     for (std::map<cstring,const IR::P4Monitor*>::iterator it=P4boxIR->monitorMap.begin(); it!=P4boxIR->monitorMap.end(); ++it){
 
         //Get block name
-        P4boxIR->blockMap[it->first] = it->second->type->controlBlockName;
+        //TODO: remove debug code
+        //P4boxIR->blockMap[it->first] = it->second->type->controlBlockName;
+        P4boxIR->blockMap[it->first] = it->second->type->monitoredBlock->blockName->monitoredBlockName;
+
+        //IF is an extern monitor THEN get associated types and/or block
+        std::vector<cstring>::iterator itExtern;
+
+        itExtern = std::find(P4boxIR->externMembers.begin(), P4boxIR->externMembers.end(), it->first);
+
+        if( P4boxIR->blockMap[it->first] == "emit" or 
+            itExtern != P4boxIR->externMembers.end() ){
+
+            //Get associated types
+            const IR::Vector<IR::Type>* externMonitorTypes = it->second->type->monitoredBlock->blockName->typeArguments;
+
+            for( auto type : *externMonitorTypes ){
+                //printf("Extern monitor type: %s\n", type->toString());
+                P4boxIR->associatedTypes[it->first].push_back( type->toString() );
+            }
+
+            //Get associated block
+            P4boxIR->associatedBlocks[it->first] = it->second->type->monitoredBlock->specialization;
+
+        }//End if is an extern monitor
 
         //Get protected state names
         IR::IndexedVector<IR::Parameter> monitorParameters = it->second->type->monitorParams->parameters;

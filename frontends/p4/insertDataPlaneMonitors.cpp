@@ -505,9 +505,6 @@ const IR::Node* InsertDataPlaneMonitors::postorder(IR::P4Control* control){
         IR::IndexedVector<IR::Parameter> parameters = control->type->applyParams->parameters;
 
         for( auto parameter : parameters ){
-            //TODO: remove debug code
-            //printf("Parameter type: %s\n", parameter->type->toString().c_str());
-            //printf("Host struct type: %s\n", P4boxIR->hostStructType.c_str());
             if( parameter->type->toString() == P4boxIR->hostStructType ){
                 //printf("Type hosting protected state: %s\n", parameter->type->toString().c_str());
                 //printf("Parameter name: %s\n", parameter->name.name.c_str());
@@ -562,12 +559,6 @@ const IR::Node* InsertDataPlaneMonitors::postorder(IR::P4Control* control){
 }
 
 
-
-
-
-const IR::Node* InsertDataPlaneMonitors::postorder(IR::MethodCallStatement* methodCall){
-    return methodCall;
-}
 
 }//End P4 namespace
 
