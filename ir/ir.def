@@ -419,6 +419,28 @@ class Declaration_Instance : Declaration, IAnnotated, IInstance {
         arguments->check_null(); }
 }
 
+
+//P4BOX
+class Protected_Declaration_Instance : Declaration, IAnnotated, IInstance {
+    optional Annotations  annotations = Annotations::empty;
+    Type                  type;  // Either Type_Name or Type_Specialized or Type_Extern
+    Vector<Expression>    arguments;
+    inline NameMap<Property> properties = {};  // P4_14 externs only, at the moment
+    optional NullOK BlockStatement initializer = nullptr;
+        // experimental only; contains just declarations, no code
+
+    Annotations getAnnotations() const override { return annotations; }
+    Type getType() const override { return type; }
+    cstring Name() const override { return name; }
+    validate{ BUG_CHECK(type->is<Type_Name>() ||
+                        type->is<Type_Specialized>() ||
+                        type->is<Type_Extern>(),        // P4_14 only?
+                        "%1%: unexpected type", type);
+        arguments->check_null(); }
+#nodbprint
+}
+
+
 // Toplevel program representation
 class P4Program : ISimpleNamespace {
     optional inline IndexedVector<Node> declarations;

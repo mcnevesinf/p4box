@@ -29,7 +29,8 @@ void GetCandidateStructs::postorder(const IR::P4Control* control){
     }
 
     /* Update list of structs that can be instrumented with P4box protected state */
-    if( monitoredBlock ){
+    //TODO: 
+    //if( monitoredBlock ){
         IR::IndexedVector<IR::Parameter> blockParameters = control->type->applyParams->parameters;
  
         if( P4boxIR->candidateTypes.size() == 0 ){
@@ -58,7 +59,7 @@ void GetCandidateStructs::postorder(const IR::P4Control* control){
             }
         }
  
-    }//End if monitored block
+    //}//End if monitored block
 
 }
 

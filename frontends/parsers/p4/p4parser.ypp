@@ -197,7 +197,7 @@ typedef const IR::Type ConstType;
                             variableDeclaration instantiation functionDeclaration
                             objDeclaration tableDeclaration controlLocalDeclaration
                             parserLocalElement 
-                            monitorDeclaration  //P4box
+                            monitorDeclaration //P4box
 %type<IR::Type_Declaration*>  headerTypeDeclaration structTypeDeclaration
                               protectedStructTypeDeclaration 
                               headerUnionDeclaration derivedTypeDeclaration
@@ -361,7 +361,13 @@ instantiation
       | typeRef "(" argumentList ")" name "=" objInitializer ";"
                      { $$ = new IR::Declaration_Instance(@5, *$5, $1, $3, $7);
                        driver.structure->declareObject(*$5); }
-    ;
+      /* P4BOX */
+      | optAnnotations PROTECTED typeRef "(" argumentList ")" name ";"
+                     { $$ = new IR::Protected_Declaration_Instance(@7, *$7, $3, $5);
+                       driver.structure->declareObject(*$7); }
+    ;      
+
+
 
 /* experimental; includes the following 3 productions */
 objInitializer
@@ -394,7 +400,8 @@ dotPrefix
 
 monitorDeclaration
     : monitorTypeDeclaration "{" monitorPropertyList "}"    
-        { $$ = new IR::P4Monitor($1->name.srcInfo, $1->name, $1, $3); }
+        { driver.structure->pop();
+          $$ = new IR::P4Monitor($1->name.srcInfo, $1->name, $1, $3); }
     ;
 
 
@@ -406,9 +413,10 @@ monitorDeclaration
 
 
 monitorTypeDeclaration
-    : MONITOR name "(" parameterList ")" ON monitoredBlock
-        { auto pl = new IR::ParameterList(@4, *$4);
-          $$ = new IR::Type_Monitor(@2, *$2, $7, pl); }
+    : MONITOR name { driver.structure->pushContainerType(*$2, false); }
+      "(" parameterList ")" ON monitoredBlock
+          { auto pl = new IR::ParameterList(@5, *$5);
+            $$ = new IR::Type_Monitor(@2, *$2, $8, pl); }
     ;
 
 

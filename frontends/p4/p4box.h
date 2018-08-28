@@ -254,6 +254,22 @@ class ValidateSupervisor final : public Inspector {
 };
 
 
+class MapProtectedInstantiations : public Transform {
+
+    SupervisorMap *P4boxIR;
+
+  public:
+    MapProtectedInstantiations( SupervisorMap *map ) { 
+	setName("MapProtectedInstantiations"); 
+        P4boxIR = map;
+    }
+
+    using Transform::postorder;
+
+    const IR::Node* postorder(IR::Protected_Declaration_Instance* pInst) override;
+};
+
+
 class P4boxTest final : public Inspector {
 
     SupervisorMap *P4boxIR;
@@ -313,6 +329,7 @@ class P4boxSetup : public PassManager {
         passes.push_back(new P4::InsertExternMonitors( &P4box, &auxTypeMap ));
         passes.push_back(new P4::InsertDataPlaneMonitors( &P4box ));
         passes.push_back(new P4::MapP4boxNames( &P4box ));
+        passes.push_back(new P4::MapProtectedInstantiations( &P4box ));
     
         passes.push_back(new P4::P4boxTest( &P4box ));
 

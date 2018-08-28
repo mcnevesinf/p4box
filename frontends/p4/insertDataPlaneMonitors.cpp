@@ -192,6 +192,7 @@ IR::ParserState* InsertDataPlaneMonitors::changeAfterTransition(
 
         //IF both the monitored and the monitor state transition using select expressions        
         if( monitoredTransition->is<IR::SelectExpression>() ){
+            //TODO: emit an error stating that monitor states can only transition to accept states through direct transitions when the original state already used a select transition
         }
         else{
 
@@ -515,7 +516,9 @@ const IR::Node* InsertDataPlaneMonitors::postorder(IR::P4Control* control){
 
 
     /* Instrument control block */
-    if( monitoredBlock ){    
+    if( monitoredBlock ){   
+
+        printf("Monitored control: %s\n", controlName.c_str()); 
 
         /* Instrument code with monitor declarations (i.e., locals) */
         IR::IndexedVector<IR::Declaration>  newControlLocals;
@@ -526,9 +529,13 @@ const IR::Node* InsertDataPlaneMonitors::postorder(IR::P4Control* control){
         }
 
         //Insert monitor (local) declarations
+        int m=0;
         for( auto local : instrumentLocals ){
             newControlLocals.push_back( local );
+            m++;
         }
+
+        printf("Number of inserted locals: %d\n", m);
 
         /* Instrument the control block with monitors before and after it */
         IR::IndexedVector<IR::StatOrDecl> newComponents;
