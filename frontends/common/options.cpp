@@ -117,9 +117,11 @@ CompilerOptions::CompilerOptions() : Util::Options(defaultMessage) {
                        }
                        return true; },
                    "Choose output format for the P4Runtime API description (default is binary).");
-    registerOption("-o", "outfile",
-                   [this](const char* arg) { outputFile = arg; return true; },
-                   "Write output to outfile");
+    // P4C-XDP BEGIN
+    //registerOption("-o", "outfile",
+    //               [this](const char* arg) { outputFile = arg; return true; },
+    //               "Write output to outfile");
+    // P4C-XDP END
     registerOption("--Wdisable", "diagnostic",
         [this](const char *diagnostic) {
             if (diagnostic) {

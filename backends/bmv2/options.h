@@ -26,6 +26,12 @@ enum class Target { UNKNOWN, PORTABLE, SIMPLE };
 
 class BMV2Options : public CompilerOptions {
  public:
+
+    //P4C-XDP BEGIN
+    // file to output to
+    cstring outputFile = nullptr;
+    //P4C-XDP END
+
     BMV2::Target arch = BMV2::Target::UNKNOWN;
     BMV2Options() {
         registerOption("--arch", "arch",
@@ -39,6 +45,12 @@ class BMV2Options : public CompilerOptions {
                         }
                         return true; },
                        "Compile for the specified architecture (psa or ss), default is ss.");
+
+        //P4C-XDP BEGIN
+        registerOption("-o", "outfile",
+                [this](const char* arg) { outputFile = arg; return true; },
+                "Write output to outfile");
+        //P4C-XDP END
      }
 };
 

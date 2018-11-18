@@ -71,8 +71,10 @@ class CompilerOptions : public Util::Options {
     cstring dumpFolder = ".";
     // Pretty-print the program in the specified file
     cstring prettyPrintFile = nullptr;
+    // P4C-XDP BEGIN
     // file to output to
-    cstring outputFile = nullptr;
+    //cstring outputFile = nullptr;
+    // P4C-XDP END
     // Compiler version.
     cstring compilerVersion;
 

@@ -22,8 +22,19 @@ limitations under the License.
 
 class EbpfOptions : public CompilerOptions {
  public:
+    // P4C-XDP BEGIN
+    // file to output to
+    cstring outputFile = nullptr;
+    // P4C-XDP END
+
     EbpfOptions() {
         langVersion = CompilerOptions::FrontendVersion::P4_16;
+
+        //P4C-XDP BEGIN
+        registerOption("-o", "outfile",
+                [this](const char* arg) { outputFile = arg; return true; },
+                "Write output to outfile");
+        //P4C-XDP END
     }
 };
 
