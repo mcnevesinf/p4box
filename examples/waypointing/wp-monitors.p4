@@ -1,6 +1,6 @@
 
-/* P4BOX - PATH CONFORMANCE */
-monitor pathConformanceMonitor(inout p4boxState pstate) on ingress {
+/* P4BOX - WAYPOINTING */
+monitor waypointMonitor(inout p4boxState pstate) on ingress {
     local {
         action wp_nop() {
         }
@@ -22,22 +22,20 @@ monitor pathConformanceMonitor(inout p4boxState pstate) on ingress {
         key = {
             hdr.ipv4.srcAddr : exact;
             hdr.ipv4.dstAddr : exact;
-            pstate.pc_tag.isValid(): ternary;
-            pstate.pc_tag.tag : ternary;
+            pstate.wp_tag.isValid(): ternary;
+            pstate.wp_tag.tag : ternary;
         }
         size = 512;
         }
 
         action insert_tag(bit<8> tag){
-            //push pc tag
-            pstate.pc_tag.setValid();
-            pstate.pc_tag.preamble = 32w0xFFFFFFFF;
-            pstate.pc_tag.tag = tag;
-            //pstate.pc_tag.nextProto = hdr.ethernet.etherType;
-            //hdr.ethernet.etherType = 16w0x1234;
+            //push wp tag
+            pstate.wp_tag.setValid();
+            pstate.wp_tag.preamble = 32w0xFFFFFFFF;
+            pstate.wp_tag.tag = tag;
         }
 
-        @name(".insert_pc_tag") table insert_pc_tag {
+        @name(".insert_wp_tag") table insert_wp_tag {
         actions = {
             wp_nop;
             insert_tag;
@@ -46,11 +44,10 @@ monitor pathConformanceMonitor(inout p4boxState pstate) on ingress {
         }
 
         action remove_tag(){
-            pstate.pc_tag.setInvalid();
-            //hdr.ethernet.etherType = 16w0x800;
+            pstate.wp_tag.setInvalid();
         }
 
-        @name(".remove_pc_tag") table remove_pc_tag {
+        @name(".remove_wp_tag") table remove_wp_tag {
         actions = {
             wp_nop;
             remove_tag;
@@ -61,44 +58,19 @@ monitor pathConformanceMonitor(inout p4boxState pstate) on ingress {
 
     after {
        //Insert tag
-       insert_pc_tag.apply();
+       insert_wp_tag.apply();
 
        //check path conformance
        check_waypoint.apply();
 
        //Remove tag
-       remove_pc_tag.apply();
+       remove_wp_tag.apply();
     }
 }
 
 
-monitor pathConformanceMonitorParser(inout p4boxState pstate) on ParserImpl {
+monitor waypointMonitorParser(inout p4boxState pstate) on ParserImpl {
     after parse_ethernet {
-        /*state start {
-            transition select(hdr.ethernet.etherType){
-                16w0x1234: parse_pc_header;
-                default: parse_aux_state;
-            }
-        }*/
-
-        /*state parse_aux_state {
-            transition accept;
-        }*/
-
-        /* TODO: solve BUG 1        
-        state parse_pc_header {
-            packet.extract(hdr.pc_tag);
-            transition select(hdr.pc_tag.nextProto){
-                16w0x800: parse_aux_state;
-            }
-        }*/
-        /*state parse_pc_header {
-            packet.extract(pstate.pc_tag);
-            transition select(pstate.pc_tag.nextProto){
-                16w0x800: parse_ipv4;
-            }
-        }*/
-
         state start {
             transition select(packet.lookahead<bit<32>>()){
                 32w0xFFFFFFFF : parse_wp_header;
@@ -107,7 +79,7 @@ monitor pathConformanceMonitorParser(inout p4boxState pstate) on ParserImpl {
         }
 
         state parse_wp_header {
-            packet.extract(pstate.pc_tag);
+            packet.extract(pstate.wp_tag);
             transition end;
         }
 
@@ -118,9 +90,9 @@ monitor pathConformanceMonitorParser(inout p4boxState pstate) on ParserImpl {
 }
 
 
-monitor pathConformanceMonitorDeparser(inout p4boxState pstate) on emit<ethernet_t>{
+monitor waypointMonitorDeparser(inout p4boxState pstate) on emit<ethernet_t>{
     after {
-        packet.emit(hdr.pc_tag);
+        packet.emit(hdr.wp_tag);
     }
 }
 
