@@ -43,6 +43,25 @@ struct SupervisorMap {
     int monitorStartStateCounter;
 };
 
+
+class GetProgramDeclarations final : public Inspector {
+
+    SupervisorMap *P4boxIR;
+
+  public:
+    GetProgramDeclarations( SupervisorMap *map ) { 
+	setName("GetProgramDeclarations"); 
+        P4boxIR = map;
+    }
+
+    using Inspector::postorder;
+
+    void postorder(const IR::P4Parser* parser) override;
+    void postorder(const IR::P4Control* control) override;
+    void postorder(const IR::Method* method) override;
+};
+
+
 class GetSupervisorNodes final : public Transform {
 
     SupervisorMap *P4boxIR;
@@ -198,24 +217,6 @@ class InsertExternMonitors : public Transform {
     using Transform::postorder;
 
     const IR::Node* postorder(IR::MethodCallStatement* origCall) override;
-};
-
-
-class GetProgramDeclarations final : public Inspector {
-
-    SupervisorMap *P4boxIR;
-
-  public:
-    GetProgramDeclarations( SupervisorMap *map ) { 
-	setName("GetProgramDeclarations"); 
-        P4boxIR = map;
-    }
-
-    using Inspector::postorder;
-
-    void postorder(const IR::P4Parser* parser) override;
-    void postorder(const IR::P4Control* control) override;
-    void postorder(const IR::Method* method) override;
 };
 
 
