@@ -290,6 +290,26 @@ class P4boxTest final : public Inspector {
 };
 
 
+class ElementModelSetup : public PassManager {
+
+  private:
+    SupervisorMap P4box;
+
+  public:
+
+    ElementModelSetup( const IR::P4Program auxProgram ){
+        passes.push_back(new P4::GetProgramDeclarations( &P4box ));
+        passes.push_back(new P4::ValidateSupervisor( &P4box ));
+        passes.push_back(new P4::GetSupervisorNodes( &P4box ));
+
+        //TODO: create equivalent model in C
+
+        std::cout << "Creating element model" << std::endl;
+        setName("ElementModelSetup");
+    }
+
+}; //End element model setup
+
 
 
 class P4boxSetup : public PassManager {

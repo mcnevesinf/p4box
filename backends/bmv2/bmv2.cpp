@@ -104,8 +104,26 @@ int main(int argc, char *const argv[]) {
                 Vertex v = *vp.first;
                 //TODO: remove debug code
                 std::cout << p4program[v] << std::endl;
-            }
-            //End of vertice iteration
+
+                options.preprocessor_options += " -D__TARGET_BMV2__";
+                options.file = p4program[v];
+                auto program = P4::parseP4File(options);
+
+                if (program == nullptr || ::errorCount() > 0)
+                    return 1;
+
+                try {
+                    P4::P4COptionPragmaParser optionsPragmaParser;
+                    program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
+
+                    P4::FrontEnd frontend;
+                    frontend.addDebugHook(hook);
+                    program = frontend.extractModel(options, program);
+                } catch (const Util::P4CExceptionBase &bug) {
+                    std::cerr << bug.what() << std::endl;
+                    return 1;
+                }
+            } //End of vertice iteration
         
             std::cout << num_vertices(graph) << std::endl;
 
@@ -113,6 +131,8 @@ int main(int argc, char *const argv[]) {
             std::cerr << bug.what() << std::endl;
             return 1;
         }
+
+        return ::errorCount() > 0;
         //P4BOX STATIC ENFORCEMENT END
 
     } else {

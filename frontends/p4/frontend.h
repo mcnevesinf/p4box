@@ -30,8 +30,23 @@ class FrontEnd {
     void addDebugHook(DebugHook hook) { hooks.push_back(hook); }
     const IR::P4Program* run(const CompilerOptions& options, const IR::P4Program* program,
                              bool skipSideEffectOrdering = false);
+    
+    //P4BOX BEGIN
+    const IR::P4Program* extractModel(const CompilerOptions& options, const IR::P4Program* program);
+    //P4BOX END
 };
 
 }  // namespace P4
 
 #endif /* _P4_FRONTEND_H_ */
+
+
+
+
+
+
+
+
+
+
+

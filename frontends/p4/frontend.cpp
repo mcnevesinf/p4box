@@ -187,4 +187,53 @@ const IR::P4Program *FrontEnd::run(const CompilerOptions &options, const IR::P4P
     return result;
 }
 
+
+//P4BOX BEGIN
+const IR::P4Program* FrontEnd::extractModel(const CompilerOptions& options, const IR::P4Program* program){
+
+    if (program == nullptr)
+        return nullptr;
+
+    bool isv1 = options.isv1();
+    ReferenceMap  refMap;
+    TypeMap       typeMap;
+    refMap.setIsV1(isv1);
+
+    auto evaluator = new P4::EvaluatorPass(&refMap, &typeMap);
+
+    PassManager passes = {
+        new PrettyPrint(options),
+        // Simple checks on parsed program
+        new ValidateParsedProgram(),
+        //P4box
+        new ElementModelSetup( *program ),
+    };
+
+    passes.setName("FrontEnd");
+    passes.setStopOnError(true);
+
+    return program;
+}
+//P4BOX END
+
+
 }  // namespace P4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
