@@ -33,6 +33,19 @@ limitations under the License.
 #include "options.h"
 #include "JsonObjects.h"
 
+//P4BOX: manage topology information
+#include <boost/graph/graphviz.hpp>
+#include <boost/graph/adjacency_list.hpp>
+
+
+using namespace boost;
+
+namespace boost {
+    enum vertex_program_t { vertex_program };
+
+    BOOST_INSTALL_PROPERTY( vertex, program );
+}
+
 int main(int argc, char *const argv[]) {
     setup_gc_logging();
 
@@ -47,6 +60,62 @@ int main(int argc, char *const argv[]) {
         return 1;
 
     auto hook = options.getDebugHook();
+
+    if(options.staticEnforce){
+
+        //P4BOX STATIC ENFORCEMENT BEGIN
+        try {
+            //Read topology information
+
+            //Vertex properties
+            typedef boost::property< vertex_program_t, std::string > DataPlaneProgram;
+            typedef boost::property< vertex_name_t, std::string, DataPlaneProgram > vertex_p;
+
+            //Graph properties
+            typedef boost::property< graph_name_t, std::string > graph_p;
+
+            //Adjacency list containing the graph that represents the network topology
+            typedef boost::adjacency_list< boost::vecS, boost::vecS, boost::directedS,
+                                       vertex_p, no_property, graph_p > graph_t;
+
+            //Construct an empty graph and prepare the dynamic_property_maps
+            graph_t graph(0);
+            boost::dynamic_properties dp{ boost::ignore_other_properties };
+
+            boost::property_map< graph_t, vertex_name_t >::type name = get( vertex_name, graph );
+            dp.property( "node_id", name );
+
+            boost::property_map< graph_t, vertex_program_t >::type p4program = get( vertex_program, graph );
+            dp.property( "program", p4program );
+
+            // Sample graph as an std::istream;
+            //std::istringstream gvgraph("digraph { graph [name=\"graphname\"]  a  c e g h }");
+            std::ifstream inputTopology("example-p4box-topology.txt");
+
+            bool status = boost::read_graphviz( inputTopology, graph, dp, "node_id" );
+            //End of topology reading
+
+            //Iterate over vertices to read and store data plane programs and forwarding rules
+            typedef boost::graph_traits< graph_t >::vertex_descriptor Vertex;
+            typedef boost::graph_traits< graph_t >::vertex_iterator vertex_iter;
+            std::pair<vertex_iter, vertex_iter> vp;
+
+            for( vp = boost::vertices(graph); vp.first != vp.second; ++vp.first ){
+                Vertex v = *vp.first;
+                //TODO: remove debug code
+                std::cout << p4program[v] << std::endl;
+            }
+            //End of vertice iteration
+        
+            std::cout << num_vertices(graph) << std::endl;
+
+        } catch (const Util::P4CExceptionBase &bug) {
+            std::cerr << bug.what() << std::endl;
+            return 1;
+        }
+        //P4BOX STATIC ENFORCEMENT END
+
+    } else {
 
     // BMV2 is required for compatibility with the previous compiler.
     options.preprocessor_options += " -D__TARGET_BMV2__";
@@ -109,4 +178,6 @@ int main(int argc, char *const argv[]) {
     P4::serializeP4RuntimeIfRequired(program, options);
 
     return ::errorCount() > 0;
+
+    }//Enf of check whether static enforcement is active
 }

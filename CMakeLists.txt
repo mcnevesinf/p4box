@@ -63,7 +63,11 @@ if (ENABLE_PROTOBUF_STATIC)
   set(CMAKE_FIND_LIBRARY_SUFFIXES ${SAVED_CMAKE_FIND_LIBRARY_SUFFIXES})
 endif ()
 # The boost graph headers are optional and only required by the graphs backend
-find_package (Boost QUIET COMPONENTS graph)
+#find_package (Boost QUIET COMPONENTS graph)
+
+#P4BOX
+find_package (Boost REQUIRED COMPONENTS graph regex)
+
 if (Boost_FOUND)
   set (HAVE_LIBBOOST_GRAPH 1)
 else ()
@@ -74,6 +78,11 @@ find_package (Boost REQUIRED COMPONENTS iostreams)
 add_definitions ("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
 find_package (LibGc 7.2.0 REQUIRED)
 find_package (LibGmp REQUIRED)
+
+#P4BOX
+link_directories(${Boost_LIBRARY_DIRS})
+#P4BOX END
+
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${PROTOBUF_INCLUDE_DIRS})
 include_directories(${LIBGMP_INCLUDE_DIR})
@@ -146,6 +155,11 @@ endif ()
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_cxx_compiler_option ("-Wall")
+
+#P4BOX
+add_cxx_compiler_option ("-lboost_graph")
+#P4BOX
+
 add_cxx_compiler_option ("-Wextra")
 add_cxx_compiler_option ("-Wno-overloaded-virtual")
 add_cxx_compiler_option ("-Wno-deprecated")
@@ -229,7 +243,9 @@ add_subdirectory (frontends)
 add_subdirectory (midend)
 add_subdirectory (control-plane)
 
-if (ENABLE_BMV2)
+#if (ENABLE_BMV2)
+#P4BOX: add libboost graph to bmv2 backend in order to read topology information
+if (ENABLE_BMV2 AND HAVE_LIBBOOST_GRAPH EQUAL 1)
     add_subdirectory (backends/bmv2)
 endif ()
 if (ENABLE_EBPF)

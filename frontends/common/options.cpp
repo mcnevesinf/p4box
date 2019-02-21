@@ -180,6 +180,11 @@ CompilerOptions::CompilerOptions() : Util::Options(defaultMessage) {
     registerOption("--dump", "folder",
                    [this](const char* arg) { dumpFolder = arg; return true; },
                    "[Compiler debugging] Folder where P4 programs are dumped\n");
+    //P4BOX BEGIN
+    registerOption("--staticEnforce", nullptr,
+                   [this](const char*) { staticEnforce = true; return true; },
+                   "Statically enforce the specified properties");
+    //P4BOX END
     registerUsage("loglevel format is:\n"
                   "  sourceFile:level,...,sourceFile:level\n"
                   "where 'sourceFile' is a compiler source file and\n"
