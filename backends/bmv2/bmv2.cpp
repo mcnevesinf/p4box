@@ -42,8 +42,10 @@ using namespace boost;
 
 namespace boost {
     enum vertex_program_t { vertex_program };
+    enum vertex_commands_t { vertex_commands };
 
     BOOST_INSTALL_PROPERTY( vertex, program );
+    BOOST_INSTALL_PROPERTY( vertex, commands );
 }
 
 int main(int argc, char *const argv[]) {
@@ -69,7 +71,8 @@ int main(int argc, char *const argv[]) {
 
             //Vertex properties
             typedef boost::property< vertex_program_t, std::string > DataPlaneProgram;
-            typedef boost::property< vertex_name_t, std::string, DataPlaneProgram > vertex_p;
+	    typedef boost::property< vertex_commands_t, std::string, DataPlaneProgram > ForwardingRules;
+            typedef boost::property< vertex_name_t, std::string, ForwardingRules > vertex_p;
 
             //Graph properties
             typedef boost::property< graph_name_t, std::string > graph_p;
@@ -88,6 +91,9 @@ int main(int argc, char *const argv[]) {
             boost::property_map< graph_t, vertex_program_t >::type p4program = get( vertex_program, graph );
             dp.property( "program", p4program );
 
+	    boost::property_map< graph_t, vertex_commands_t >::type p4commands = get( vertex_commands, graph );
+	    dp.property( "commands", p4commands );
+
             // Sample graph as an std::istream;
             //std::istringstream gvgraph("digraph { graph [name=\"graphname\"]  a  c e g h }");
             std::ifstream inputTopology("example-p4box-topology.txt");
@@ -104,9 +110,11 @@ int main(int argc, char *const argv[]) {
                 Vertex v = *vp.first;
                 //TODO: remove debug code
                 std::cout << p4program[v] << std::endl;
+		//std::cout << "p4commands: " << p4commands[v] << std::endl;
 
                 options.preprocessor_options += " -D__TARGET_BMV2__";
                 options.file = p4program[v];
+		options.commandsFile = p4commands[v];
                 auto program = P4::parseP4File(options);
 
                 if (program == nullptr || ::errorCount() > 0)
@@ -125,7 +133,7 @@ int main(int argc, char *const argv[]) {
                 }
             } //End of vertice iteration
         
-            std::cout << num_vertices(graph) << std::endl;
+            //std::cout << num_vertices(graph) << std::endl;
 
         } catch (const Util::P4CExceptionBase &bug) {
             std::cerr << bug.what() << std::endl;
@@ -148,7 +156,17 @@ int main(int argc, char *const argv[]) {
 
         P4::FrontEnd frontend;
         frontend.addDebugHook(hook);
-        program = frontend.run(options, program);
+
+        //P4BOX BEGIN
+        if(options.emitMonitoredP4){
+            frontend.emitMonitoredP4(options, program);  
+            return 0;
+        }
+        else{
+            program = frontend.run(options, program);
+        }
+        //P4BOX END
+
     } catch (const Util::P4CExceptionBase &bug) {
         std::cerr << bug.what() << std::endl;
         return 1;

@@ -87,6 +87,28 @@ class PrettyPrint : public Inspector {
         return false;  // prune
     }
 };
+
+class EmitMonitoredCode : public Inspector {
+    /// output file
+    cstring outfile;
+    /// The file that is being compiled.  This used
+    cstring inputfile;
+ public:
+    explicit EmitMonitoredCode(const CompilerOptions& options) {
+        setName("EmitMonitoredCode");
+        outfile = options.emitMonitoredP4File;
+        inputfile = options.file;
+    }
+    bool preorder(const IR::P4Program* program) override {
+        if (!outfile.isNullOrEmpty()) {
+            Util::PathName path(outfile);
+            std::ostream *outStream = openFile(path.toString(), true);
+            P4::ToP4 top4(outStream, false, inputfile);
+            (void)program->apply(top4);
+        }
+        return false;  // prune
+    }
+};
 }  // namespace
 
 /**
@@ -189,6 +211,37 @@ const IR::P4Program *FrontEnd::run(const CompilerOptions &options, const IR::P4P
 
 
 //P4BOX BEGIN
+const IR::P4Program* FrontEnd::emitMonitoredP4(const CompilerOptions& options, const IR::P4Program* program){
+
+    if (program == nullptr)
+        return nullptr;
+
+    bool isv1 = options.isv1();
+    ReferenceMap  refMap;
+    TypeMap       typeMap;
+    refMap.setIsV1(isv1);
+
+    auto evaluator = new P4::EvaluatorPass(&refMap, &typeMap);
+
+    PassManager passes = {
+        new PrettyPrint(options),
+        // Simple checks on parsed program
+        new ValidateParsedProgram(),
+        //P4box
+        new P4boxSetup( *program ),
+        new EmitMonitoredCode(options),
+    };
+
+    passes.setName("FrontEnd");
+    passes.setStopOnError(true);
+    const IR::P4Program* result = program->apply(passes);
+
+    return result;
+
+}
+
+
+
 const IR::P4Program* FrontEnd::extractModel(const CompilerOptions& options, const IR::P4Program* program){
 
     if (program == nullptr)
@@ -206,13 +259,14 @@ const IR::P4Program* FrontEnd::extractModel(const CompilerOptions& options, cons
         // Simple checks on parsed program
         new ValidateParsedProgram(),
         //P4box
-        new ElementModelSetup( *program ),
+        new ElementModelSetup( options, *program ), //We consider the whole P4 program as an element (i.e., a network node)
     };
 
     passes.setName("FrontEnd");
     passes.setStopOnError(true);
+    const IR::P4Program* result = program->apply(passes);
 
-    return program;
+    return result;
 }
 //P4BOX END
 

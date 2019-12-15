@@ -32,6 +32,7 @@ class FrontEnd {
                              bool skipSideEffectOrdering = false);
     
     //P4BOX BEGIN
+    const IR::P4Program* emitMonitoredP4(const CompilerOptions& options, const IR::P4Program* program);
     const IR::P4Program* extractModel(const CompilerOptions& options, const IR::P4Program* program);
     //P4BOX END
 };

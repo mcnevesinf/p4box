@@ -70,6 +70,7 @@ set (P4_FRONTEND_SRCS
   p4/insertExternMonitors.cpp
   p4/mapP4boxNames.cpp
   p4/mapProtectedInstantiations.cpp
+  p4/createModel.cpp
   p4/p4boxTest.cpp
   )
 

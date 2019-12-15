@@ -47,7 +47,7 @@ const IR::Node* InsertProtectedState::postorder(IR::Type_Struct* origStruct){
 
             P4boxIR->pStateInserted = true;
             P4boxIR->hostStructType = structName;
-            printf("Host struct: %s\n", structName.c_str());
+            
             return newStruct;
         }//End if protected state not inserted yet
     }//End if is candidate type

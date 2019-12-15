@@ -175,7 +175,7 @@ const IR::Node* InsertExternMonitors::postorder(IR::MethodCallStatement* origCal
                                 instrumentAfter.push_back( component );
                                 m++;
                             }
-                            printf("Number of after components in an extern monitor: %d\n", m);
+                            
                         }
                     }
 

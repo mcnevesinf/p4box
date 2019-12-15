@@ -100,6 +100,9 @@ class CompilerOptions : public Util::Options {
 
     //P4BOX BEGIN
     bool staticEnforce = false;
+    bool emitMonitoredP4 = false;
+    cstring emitMonitoredP4File = nullptr;
+    cstring commandsFile = nullptr;
     //P4BOX END
 
     // Expect that the only remaining argument is the input file.

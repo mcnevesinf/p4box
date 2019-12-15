@@ -448,7 +448,7 @@ const IR::Node* InsertDataPlaneMonitors::postorder(IR::P4Control* control){
         //IF monitors this control block
         if( it->second == controlName ){
             monitoredBlock = true;
-            P4boxIR->monitorTypeMap[it->first] = CONTROL_MONITOR;
+            P4boxIR->monitorTypeMap[it->first] = CONTROL_BLOCK_MONITOR;
 
             /* Get monitor properties (local, before and after) */
             const IR::IndexedVector<IR::MonitorProperty>* monitorProperties = P4boxIR->monitorMap[it->first]->properties;
@@ -518,8 +518,6 @@ const IR::Node* InsertDataPlaneMonitors::postorder(IR::P4Control* control){
     /* Instrument control block */
     if( monitoredBlock ){   
 
-        printf("Monitored control: %s\n", controlName.c_str()); 
-
         /* Instrument code with monitor declarations (i.e., locals) */
         IR::IndexedVector<IR::Declaration>  newControlLocals;
 
@@ -534,8 +532,6 @@ const IR::Node* InsertDataPlaneMonitors::postorder(IR::P4Control* control){
             newControlLocals.push_back( local );
             m++;
         }
-
-        printf("Number of inserted locals: %d\n", m);
 
         /* Instrument the control block with monitors before and after it */
         IR::IndexedVector<IR::StatOrDecl> newComponents;

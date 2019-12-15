@@ -9,8 +9,11 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <bitset>
 
 //#include "setup.h"
+#include "../common/options.h"
+
 #include "createBuiltins.h"
 #include "directCalls.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
@@ -18,8 +21,11 @@
 #include "ir/ir.h"
 #include "typeChecking/typeChecker.h"
 
-#define CONTROL_MONITOR 1
+#define CONTROL_BLOCK_MONITOR 1
 #define PARSER_MONITOR 2
+
+#define TYPE_NAME 1
+#define TYPE_BITS 2
 
 namespace P4 {
 
@@ -41,6 +47,22 @@ struct SupervisorMap {
     std::map<cstring, std::vector<cstring>> pStateNames; //<monitor-name, monitor-parameters>
     bool pStateInserted;
     int monitorStartStateCounter;
+};
+
+
+struct MonitorModel {
+    std::string monitorName;
+    std::string monitoredBlock;
+    bool before; //After if false
+    std::string qualifier;
+    std::string model;
+};
+
+
+struct DataModel{
+    std::vector<std::string> headers;
+    std::vector<std::string> structs;
+    std::vector<std::string> typedefs;
 };
 
 
@@ -290,6 +312,114 @@ class P4boxTest final : public Inspector {
 };
 
 
+class CreateModel final : public Inspector {
+
+  private:
+    SupervisorMap *P4boxIR;
+
+    int nodeCounter;
+    int tableCounter;
+    int actionCounter;
+    int assertionCounter;
+    std::map<cstring, int> tableIDs;
+    std::map<cstring, int> actionIDs;
+    std::map<cstring, int> typedefs;
+ 
+    //Map containing forwarding rules
+    //Key : table name
+    //Value : rule components (command, action, match, parameters)
+    std::map<cstring, std::vector<std::vector<std::string>>> forwardingRules;
+
+    cstring modelName;
+    cstring commandsFile;
+    std::string model;
+    std::string mainFunctionModel;
+    std::string inputDeclaration;
+    std::string inputSymbolization;
+    std::string globalDeclarations;
+
+    std::vector<std::string> logicalExpressionList;
+
+    bool pStateOn;
+
+    //std::vector<std::string> monitorCalls;
+
+    //Need to keep: 	1) monitor name; 2) monitored block; 3) before/after; 
+    // 			4) qualifier (e.g., parser state, extern type); 5) C model
+    std::vector<MonitorModel> controlBlockMonitorModels;
+    std::vector<MonitorModel> parserMonitorModels;
+    std::vector<std::string> locals;
+
+    DataModel modeledStructures;
+
+    int getMonitorType(std::string monitoredBlockName);
+    int getFieldType(const IR::StructField* field);
+
+    std::string actionListNoRules(const IR::ActionList* actionList);
+    std::string actionListWithRules(cstring tableName, const IR::Key* keyList);
+    std::pair<std::string, std::string> assertionToC(std::string assertString);
+    std::string blockStatementToC(IR::BlockStatement body);
+    std::string blockStatementToC(const IR::BlockStatement* body);
+    std::string constantToC(const IR::Constant* intConst);
+    std::string convertExactMatchValue(std::string value);
+    std::string exprToC(const IR::Expression* expr);
+    std::string insertAssertionChecks(void);
+    std::string insertPreamble(void);
+    std::string methodCallExpressionToC(const IR::MethodCallExpression* methodCall);
+    std::string protectedStructToC(const IR::Type_ProtectedStruct* pstruct);
+    std::string replaceAllOccurrences(std::string oldString, char oldChar, char newChar);
+    std::string stringLiteralToC(const IR::StringLiteral* strLit);
+    std::string assignmentStatemToC(const IR::AssignmentStatement* assignStatem);
+    std::string lvalueToC(const IR::Expression* lvalue);
+    std::string assign(const IR::AssignmentStatement* assignStatem);
+    std::string p4ActionToC(const IR::P4Action* action);
+    std::string p4ParserToC(const IR::P4Parser* parser);
+    std::string p4TableToC(const IR::P4Table* table);
+    std::string pathToC(const IR::PathExpression* pathExpr);
+    std::string memberToC(const IR::Member* member);
+    std::string typeNameToC(const IR::Type_Name* tName);
+    
+    bool isExternal(bool placeholder);
+    std::string bitSizeToType( int size );
+    std::string klee_make_symbolic(std::string var);
+
+  public:
+    CreateModel( const CompilerOptions& options, SupervisorMap *map ){
+        modelName = options.file;
+	commandsFile = options.commandsFile;
+        P4boxIR = map;
+
+        nodeCounter = 1;
+	tableCounter = 1;
+        actionCounter = 1;
+	assertionCounter = 1;
+        mainFunctionModel = "";
+        model = "";
+	inputDeclaration = "";
+	inputSymbolization = "void symbolizeInputs(){\n";
+	globalDeclarations = "";
+
+	pStateOn = false;
+
+        std::cout << "Testing model creation\n";
+        setName("CreateModel");
+    }
+
+    using Inspector::init_apply;
+    using Inspector::postorder;
+
+    Visitor::profile_t init_apply(const IR::Node *root) override;
+    void postorder(const IR::Declaration_Instance* instance) override;
+    void postorder(const IR::P4Parser* parser) override;
+    void postorder(const IR::Type_Header* header) override;
+    void postorder(const IR::Type_Struct* tstruct) override;
+    void postorder(const IR::Type_Typedef* tdef) override;
+    std::string assembleMonitors( std::string progBlock );
+    void end_apply(const IR::Node* node) override;
+
+};
+
+
 class ElementModelSetup : public PassManager {
 
   private:
@@ -297,12 +427,11 @@ class ElementModelSetup : public PassManager {
 
   public:
 
-    ElementModelSetup( const IR::P4Program auxProgram ){
+    ElementModelSetup( const CompilerOptions& options, const IR::P4Program auxProgram ){
         passes.push_back(new P4::GetProgramDeclarations( &P4box ));
         passes.push_back(new P4::ValidateSupervisor( &P4box ));
         passes.push_back(new P4::GetSupervisorNodes( &P4box ));
-
-        //TODO: create equivalent model in C
+        passes.push_back(new P4::CreateModel( options, &P4box ));
 
         std::cout << "Creating element model" << std::endl;
         setName("ElementModelSetup");

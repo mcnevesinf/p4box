@@ -184,6 +184,10 @@ CompilerOptions::CompilerOptions() : Util::Options(defaultMessage) {
     registerOption("--staticEnforce", nullptr,
                    [this](const char*) { staticEnforce = true; return true; },
                    "Statically enforce the specified properties");
+
+    registerOption("--emitMonitoredP4", "file",
+                   [this](const char* arg) { emitMonitoredP4 = true; emitMonitoredP4File = arg; return true; },
+                   "Emit P4box instrumented program as a P4 source");
     //P4BOX END
     registerUsage("loglevel format is:\n"
                   "  sourceFile:level,...,sourceFile:level\n"
