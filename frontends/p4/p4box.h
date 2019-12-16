@@ -13,6 +13,7 @@
 
 //#include "setup.h"
 #include "../common/options.h"
+#include "../common/netMap.h"
 
 #include "createBuiltins.h"
 #include "directCalls.h"
@@ -316,6 +317,7 @@ class CreateModel final : public Inspector {
 
   private:
     SupervisorMap *P4boxIR;
+    NetMap* networkMap;
 
     int nodeCounter;
     int tableCounter;
@@ -384,10 +386,11 @@ class CreateModel final : public Inspector {
     std::string klee_make_symbolic(std::string var);
 
   public:
-    CreateModel( const CompilerOptions& options, SupervisorMap *map ){
+    CreateModel( const CompilerOptions& options, SupervisorMap *map, NetMap& networkModelMap ){
         modelName = options.file;
 	commandsFile = options.commandsFile;
         P4boxIR = map;
+	networkMap = &networkModelMap;
 
         nodeCounter = 1;
 	tableCounter = 1;
@@ -427,11 +430,11 @@ class ElementModelSetup : public PassManager {
 
   public:
 
-    ElementModelSetup( const CompilerOptions& options, const IR::P4Program auxProgram ){
+    ElementModelSetup( const CompilerOptions& options, const IR::P4Program auxProgram, NetMap& networkModelMap ){
         passes.push_back(new P4::GetProgramDeclarations( &P4box ));
         passes.push_back(new P4::ValidateSupervisor( &P4box ));
         passes.push_back(new P4::GetSupervisorNodes( &P4box ));
-        passes.push_back(new P4::CreateModel( options, &P4box ));
+        passes.push_back(new P4::CreateModel( options, &P4box, networkModelMap ));
 
         std::cout << "Creating element model" << std::endl;
         setName("ElementModelSetup");

@@ -36,6 +36,7 @@ limitations under the License.
 //P4BOX: manage topology information
 #include <boost/graph/graphviz.hpp>
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/depth_first_search.hpp>
 
 
 using namespace boost;
@@ -47,6 +48,32 @@ namespace boost {
     BOOST_INSTALL_PROPERTY( vertex, program );
     BOOST_INSTALL_PROPERTY( vertex, commands );
 }
+
+            //Vertex properties
+            typedef boost::property< vertex_program_t, std::string > DataPlaneProgram;
+	    typedef boost::property< vertex_commands_t, std::string, DataPlaneProgram > ForwardingRules;
+            typedef boost::property< vertex_name_t, std::string, ForwardingRules > vertex_p;
+
+            //Graph properties
+            typedef boost::property< graph_name_t, std::string > graph_p;
+
+            //Adjacency list containing the graph that represents the network topology
+            typedef boost::adjacency_list< boost::vecS, boost::vecS, boost::directedS,
+                                       vertex_p, no_property, graph_p > graph_t;
+
+            typedef boost::graph_traits< graph_t >::vertex_descriptor Vertex;
+            typedef boost::graph_traits< graph_t >::vertex_iterator vertex_iter;
+
+
+
+class custom_dfs_visitor : public boost::default_dfs_visitor{
+    public:
+
+	void discover_vertex(Vertex u, graph_t g) {
+	    boost::property_map< graph_t, vertex_name_t >::type name = get( vertex_name, g );
+	    std::cout << "Visiting node " << name[u] << std::endl;
+	}
+};
 
 int main(int argc, char *const argv[]) {
     setup_gc_logging();
@@ -69,17 +96,6 @@ int main(int argc, char *const argv[]) {
         try {
             //Read topology information
 
-            //Vertex properties
-            typedef boost::property< vertex_program_t, std::string > DataPlaneProgram;
-	    typedef boost::property< vertex_commands_t, std::string, DataPlaneProgram > ForwardingRules;
-            typedef boost::property< vertex_name_t, std::string, ForwardingRules > vertex_p;
-
-            //Graph properties
-            typedef boost::property< graph_name_t, std::string > graph_p;
-
-            //Adjacency list containing the graph that represents the network topology
-            typedef boost::adjacency_list< boost::vecS, boost::vecS, boost::directedS,
-                                       vertex_p, no_property, graph_p > graph_t;
 
             //Construct an empty graph and prepare the dynamic_property_maps
             graph_t graph(0);
@@ -102,13 +118,17 @@ int main(int argc, char *const argv[]) {
             //End of topology reading
 
             //Iterate over vertices to read and store data plane programs and forwarding rules
-            typedef boost::graph_traits< graph_t >::vertex_descriptor Vertex;
-            typedef boost::graph_traits< graph_t >::vertex_iterator vertex_iter;
             std::pair<vertex_iter, vertex_iter> vp;
+
+	    //Store pieces of network-wide model
+	    NetMap networkModelMap;
+	    std::string netModel = "";
 
             for( vp = boost::vertices(graph); vp.first != vp.second; ++vp.first ){
                 Vertex v = *vp.first;
                 //TODO: remove debug code
+		std::cout << name[v] << std::endl;
+		networkModelMap.currentNode = name[v];
                 std::cout << p4program[v] << std::endl;
 		//std::cout << "p4commands: " << p4commands[v] << std::endl;
 
@@ -126,7 +146,15 @@ int main(int argc, char *const argv[]) {
 
                     P4::FrontEnd frontend;
                     frontend.addDebugHook(hook);
-                    program = frontend.extractModel(options, program);
+                    program = frontend.extractModel(options, program, networkModelMap);
+		    
+		    if(networkModelMap.headersOn){
+			std::cout << "Headers successfuly inserted" << std::endl;
+                    }
+		    else{
+			std::cout << "Values not updated" << std::endl;
+		    }
+
                 } catch (const Util::P4CExceptionBase &bug) {
                     std::cerr << bug.what() << std::endl;
                     return 1;
@@ -134,6 +162,21 @@ int main(int argc, char *const argv[]) {
             } //End of vertice iteration
         
             //std::cout << num_vertices(graph) << std::endl;
+
+	    //Graph traversal
+	    Vertex v;
+
+	    for( vp = boost::vertices(graph); vp.first != vp.second; ++vp.first ){
+		v = *vp.first;
+		std::cout << "Node name: " << name[v] << std::endl;
+		if( name[v] == "a" ){
+		    std::cout << "Set start node" << std::endl;
+		    break;
+		}
+	    }
+
+	    custom_dfs_visitor vis;
+	    boost::depth_first_search( graph, boost::visitor(vis).root_vertex(v) );
 
         } catch (const Util::P4CExceptionBase &bug) {
             std::cerr << bug.what() << std::endl;

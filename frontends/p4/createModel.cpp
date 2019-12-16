@@ -850,11 +850,19 @@ Visitor::profile_t CreateModel::init_apply(const IR::Node *root){
 	            std::string paramName = param->name.toString().c_str();
 	            std::string paramType = param->type->toString().c_str();
 
-                    inputSymbolization += klee_make_symbolic( paramName );
-
     	            //Declare parameters
-	            inputDeclaration += paramType + " " + paramName + ";\n";
-		    pStateOn = true;
+		    if(paramType == "headers" || paramType == "p4boxState"){
+			if(!networkMap->headersOn){
+			    inputSymbolization += klee_make_symbolic( paramName );
+	            	    inputDeclaration += paramType + " " + paramName + ";\n";
+		    	    pStateOn = true;
+			}
+		    }
+		    else{
+			inputSymbolization += klee_make_symbolic( paramName );
+			inputDeclaration += paramType + " " + paramName + ";\n";
+		    	pStateOn = true;
+		    }
                 }
 	    }
 	}
@@ -999,12 +1007,12 @@ void CreateModel::postorder(const IR::Declaration_Instance* instance){
     //std::cout << "Dec instance type: " << instance->type->toString() << std::endl;
 
     if( instance->type->toString() == "V1Switch" ){
-        mainFunctionModel += "int main(){\n\t";
-	mainFunctionModel += "symbolizeInputs();\n\t";
+        mainFunctionModel += "int nodeModel_" + std::to_string(networkMap->deviceId) + "(){\n\t";
+	mainFunctionModel += "symbolizeInputs_" + std::to_string(networkMap->deviceId) + "();\n\t";
         mainFunctionModel += assembleMonitors( "ingress" );
         mainFunctionModel += assembleMonitors( "egress" );
-	mainFunctionModel += "end_assertions();\n\t";
-        mainFunctionModel += "return 0;\n}\n";
+	//mainFunctionModel += "end_assertions();\n\t";
+        mainFunctionModel += "\n}\n";
 
         //TODO: remove debug code
         //std::cout << mainFunctionModel << std::endl;
@@ -1023,10 +1031,17 @@ void CreateModel::postorder(const IR::P4Parser* parser){
 	    std::string paramName = param->name.toString().c_str();
 	    std::string paramType = param->type->toString().c_str();
 
-            inputSymbolization += klee_make_symbolic( paramName );
-
     	    //Declare parameters
-	    inputDeclaration += paramType + " " + paramName + ";\n";
+	    if(paramType == "headers" || paramType == "p4boxState"){
+		if(!networkMap->headersOn){
+		    inputSymbolization += klee_make_symbolic( paramName );
+		    inputDeclaration += paramType + " " + paramName + ";\n";
+		}
+	    }
+	    else{
+	 	inputSymbolization += klee_make_symbolic( paramName );
+		inputDeclaration += paramType + " " + paramName + ";\n";
+	    }
         }
 
     }
@@ -1085,7 +1100,16 @@ void CreateModel::postorder(const IR::Type_Struct* tstruct){
     }
 
     returnString += "} " + tstruct->name + ";\n";
-    modeledStructures.structs.push_back( returnString );
+
+    //Model headers and p4box state only once
+    if(tstruct->name == "headers" || tstruct->name == "p4boxState"){
+	if(!networkMap->headersOn){
+    	    modeledStructures.structs.push_back( returnString );
+	}
+    }
+    else{
+	modeledStructures.structs.push_back( returnString );
+    }
 }
 
 
@@ -1134,11 +1158,16 @@ void CreateModel::end_apply(const IR::Node* node){
 
     /* Create model for a complete program */
 
-    model += insertPreamble();
+    if(!networkMap->headersOn){
+        model += insertPreamble();
+    }
+
     model += globalDeclarations;
     model += "\n";
 
-    model += "void end_assertions();\n\n";
+    if(!networkMap->headersOn){
+        model += "void end_assertions();\n\n";
+    }
 
     //Forward declare tables and actions
     //TODO: forward declare parser states
@@ -1155,19 +1184,23 @@ void CreateModel::end_apply(const IR::Node* node){
     model += "\n\n";
 
     model += "// Headers and metadata\n";
-    for( auto tdef : modeledStructures.typedefs ){
-	model += tdef;
-	model += "\n";
-    }
+    //Add only once into the model
+    if(!networkMap->headersOn){
 
-    for( auto headerModel : modeledStructures.headers ){
-        model += headerModel;
-	model += "\n";
-    }
+        for( auto tdef : modeledStructures.typedefs ){
+	    model += tdef;
+    	    model += "\n";
+        }
 
-    //Model protected state
-    for( auto pstruct : P4boxIR->pStructMap ){
-	modeledStructures.structs.push_back( protectedStructToC(pstruct.second) );
+        for( auto headerModel : modeledStructures.headers ){
+            model += headerModel;
+	    model += "\n";
+         }
+
+        //Model protected state
+        for( auto pstruct : P4boxIR->pStructMap ){
+	    modeledStructures.structs.push_back( protectedStructToC(pstruct.second) );
+        }
     }
 
     for( auto structModel : modeledStructures.structs ){
@@ -1190,7 +1223,7 @@ void CreateModel::end_apply(const IR::Node* node){
     model += "\n";
 
     //Model assertion checks
-    model += insertAssertionChecks();
+    //model += insertAssertionChecks();
     model += "\n";
     model += mainFunctionModel;
     

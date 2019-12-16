@@ -242,7 +242,7 @@ const IR::P4Program* FrontEnd::emitMonitoredP4(const CompilerOptions& options, c
 
 
 
-const IR::P4Program* FrontEnd::extractModel(const CompilerOptions& options, const IR::P4Program* program){
+const IR::P4Program* FrontEnd::extractModel(const CompilerOptions& options, const IR::P4Program* program, NetMap& networkModelMap){
 
     if (program == nullptr)
         return nullptr;
@@ -259,7 +259,7 @@ const IR::P4Program* FrontEnd::extractModel(const CompilerOptions& options, cons
         // Simple checks on parsed program
         new ValidateParsedProgram(),
         //P4box
-        new ElementModelSetup( options, *program ), //We consider the whole P4 program as an element (i.e., a network node)
+        new ElementModelSetup( options, *program, networkModelMap ), //We consider the whole P4 program as an element (i.e., a network node)
     };
 
     passes.setName("FrontEnd");
