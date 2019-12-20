@@ -34,9 +34,11 @@ limitations under the License.
 #include "JsonObjects.h"
 
 //P4BOX: manage topology information
-#include <boost/graph/graphviz.hpp>
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/depth_first_search.hpp>
+#include "/usr/include/boost/graph/graphviz.hpp"
+#include "/usr/include/boost/graph/adjacency_list.hpp"
+#include "/usr/include/boost/graph/depth_first_search.hpp"
+#include "/usr/include/boost/graph/breadth_first_search.hpp"
+#include "/usr/include/boost/version.hpp"
 
 
 using namespace boost;
@@ -45,8 +47,13 @@ namespace boost {
     enum vertex_program_t { vertex_program };
     enum vertex_commands_t { vertex_commands };
 
+    enum edge_sport_t { edge_sport };
+    enum edge_dport_t { edge_dport };
+
     BOOST_INSTALL_PROPERTY( vertex, program );
     BOOST_INSTALL_PROPERTY( vertex, commands );
+    BOOST_INSTALL_PROPERTY( edge, sport );
+    BOOST_INSTALL_PROPERTY( edge, dport );
 }
 
             //Vertex properties
@@ -54,25 +61,139 @@ namespace boost {
 	    typedef boost::property< vertex_commands_t, std::string, DataPlaneProgram > ForwardingRules;
             typedef boost::property< vertex_name_t, std::string, ForwardingRules > vertex_p;
 
+	    //Edge properties
+	    typedef boost::property< edge_sport_t, int > SrcPort;
+	    typedef boost::property< edge_dport_t, int, SrcPort > DstPort;
+	    typedef boost::property< edge_name_t, std::string, DstPort > edge_p;
+
             //Graph properties
             typedef boost::property< graph_name_t, std::string > graph_p;
 
             //Adjacency list containing the graph that represents the network topology
             typedef boost::adjacency_list< boost::vecS, boost::vecS, boost::directedS,
-                                       vertex_p, no_property, graph_p > graph_t;
+                                       vertex_p, edge_p, graph_p > graph_t;
 
             typedef boost::graph_traits< graph_t >::vertex_descriptor Vertex;
+	    typedef boost::graph_traits< graph_t >::edge_descriptor Edge;
             typedef boost::graph_traits< graph_t >::vertex_iterator vertex_iter;
+            typedef boost::graph_traits< graph_t >::edge_iterator edge_iter;
 
+class custom_bfs_visitor : public boost::default_bfs_visitor{
 
+    boost::property_map< graph_t, vertex_name_t >::type nodeName;
+    boost::property_map< graph_t, edge_sport_t >::type srcPort;
+    boost::property_map< graph_t, edge_dport_t >::type dstPort;
 
-class custom_dfs_visitor : public boost::default_dfs_visitor{
+    std::string* model;
+    int level;
+
+    std::string tabSpacing(int level){
+	std::string returnString = "";
+
+	for(int i = 0; i < level; i++){
+	    returnString += "\t";
+	}
+
+	return returnString;
+    }
+
     public:
 
-	void discover_vertex(Vertex u, graph_t g) {
-	    boost::property_map< graph_t, vertex_name_t >::type name = get( vertex_name, g );
-	    std::cout << "Visiting node " << name[u] << std::endl;
+	custom_bfs_visitor(graph_t& g, std::string* netModel){
+	    nodeName = get( vertex_name, g);
+	    srcPort = get( edge_sport, g );
+	    dstPort = get( edge_dport, g );
+	    model = netModel;
+
+    	    level = 1;
 	}
+
+	void discover_vertex(Vertex u, const graph_t& g){
+	    std::cout << "Visiting node " << nodeName[u] << std::endl;
+	    *model += "void walk_" + nodeName[u] + "(){\n";
+	    *model += "\t//Process node model\n\n";
+
+	    std::pair<edge_iter, edge_iter> es;
+	    Vertex srcVertex;
+
+	    //For each edge
+	    for( es = boost::edges(g); es.first != es.second; ++es.first ){
+		Edge e = *es.first;
+		srcVertex = boost::source(e, g);
+		
+		//Model edges that leave current node
+		if( u == srcVertex ){
+		    std::cout << "Src vertex: " << srcVertex << std::endl;
+		    std::cout << "Edge src port: " << srcPort[e] << std::endl;
+		    *model += tabSpacing(level) + "if( output_port == " + std::to_string( srcPort[e] ) + " ){\n";
+		    *model += tabSpacing(level+1) + "input_port = " + std::to_string( dstPort[e] ) + ";\n";
+		    *model += tabSpacing(level+1) + "walk_\n";
+		    *model += tabSpacing(level) + "}\n";
+		    *model += tabSpacing(level) + "else {\n";
+		    level++;
+		}
+	    }
+
+	    for(int i = level-1; i >= 1; i--){
+		*model += tabSpacing(i) + "}\n";
+	    }	    
+	    level = 1;
+	    *model += "}\n\n";
+	}
+
+};
+
+class custom_dfs_visitor : public boost::default_dfs_visitor{
+
+
+    boost::property_map< graph_t, vertex_name_t >::type nodeName;
+
+    std::string* model;
+    int level;
+
+    std::string tabSpacing(int level){
+	std::string returnString = "";
+
+	for(int i = 0; i < level; i++){
+	    returnString += "\t";
+	}
+
+	return returnString;
+    }
+
+    public:
+
+	custom_dfs_visitor(graph_t& g, std::string* netModel){
+	    nodeName = get( vertex_name, g);
+	    model = netModel;
+
+	    level = 0;
+	}
+
+	void discover_vertex(Vertex u, const graph_t& g){
+	    level++;
+	    std::cout << "Visiting node " << nodeName[u] << std::endl;
+	    *model += tabSpacing(level);
+	    *model += "call_node_" + nodeName[u] + "();\n";
+	}
+
+	void tree_edge(Edge e, const graph_t& g){
+	    *model += tabSpacing(level);
+	    *model += "if(){\n";
+	}
+	
+	void finish_edge(Edge e, const graph_t& g){
+	    std::cout << "Pass here" << std::endl;
+	    *model += tabSpacing(level);
+	    *model += "}\n"; 
+	    *model += "else {\n";
+	}
+
+	void finish_vertex(Vertex u, const graph_t& g){
+	    *model += tabSpacing(level);
+	    *model += "}\n";
+	    level--;
+	}	
 };
 
 int main(int argc, char *const argv[]) {
@@ -110,6 +231,12 @@ int main(int argc, char *const argv[]) {
 	    boost::property_map< graph_t, vertex_commands_t >::type p4commands = get( vertex_commands, graph );
 	    dp.property( "commands", p4commands );
 
+	    boost::property_map< graph_t, edge_sport_t >::type src_ports = get( edge_sport, graph );
+	    dp.property( "sport", src_ports );
+
+	    boost::property_map< graph_t, edge_dport_t >::type dst_ports = get( edge_dport, graph );
+	    dp.property( "dport", dst_ports );
+
             // Sample graph as an std::istream;
             //std::istringstream gvgraph("digraph { graph [name=\"graphname\"]  a  c e g h }");
             std::ifstream inputTopology("example-p4box-topology.txt");
@@ -128,7 +255,7 @@ int main(int argc, char *const argv[]) {
                 Vertex v = *vp.first;
                 //TODO: remove debug code
 		std::cout << name[v] << std::endl;
-		networkModelMap.currentNode = name[v];
+		networkModelMap.currentNodeName = name[v];
                 std::cout << p4program[v] << std::endl;
 		//std::cout << "p4commands: " << p4commands[v] << std::endl;
 
@@ -147,6 +274,7 @@ int main(int argc, char *const argv[]) {
                     P4::FrontEnd frontend;
                     frontend.addDebugHook(hook);
                     program = frontend.extractModel(options, program, networkModelMap);
+		    netModel += networkModelMap.nodeModels[name[v]];
 		    
 		    if(networkModelMap.headersOn){
 			std::cout << "Headers successfuly inserted" << std::endl;
@@ -164,6 +292,7 @@ int main(int argc, char *const argv[]) {
             //std::cout << num_vertices(graph) << std::endl;
 
 	    //Graph traversal
+	    //TODO: set start node
 	    Vertex v;
 
 	    for( vp = boost::vertices(graph); vp.first != vp.second; ++vp.first ){
@@ -175,8 +304,34 @@ int main(int argc, char *const argv[]) {
 		}
 	    }
 
-	    custom_dfs_visitor vis;
-	    boost::depth_first_search( graph, boost::visitor(vis).root_vertex(v) );
+	    //custom_dfs_visitor vis(graph, &netModel);
+	    //boost::depth_first_search( graph, boost::visitor(vis).root_vertex(v) );
+
+	    custom_bfs_visitor vis(graph, &netModel);
+	    boost::breadth_first_search( graph, v, boost::visitor(vis) );
+
+	    //Model main function
+	    //TODO: set start port
+	    netModel += "int main(){\n";
+	    netModel += "\t" + networkModelMap.stdMeta[name[v]] + ".ingress_port = 0;\n";
+	    netModel += "\twalk_" + name[v] + "();\n";
+	    netModel += "\treturn 0;\n";
+	    netModel += "}\n";
+
+	    std::cout << "------- Net model --------" << std::endl;
+	    //std::cout << netModel << std::endl;
+
+std::cout << "Using Boost "     
+          << BOOST_VERSION / 100000     << "."  // major version
+          << BOOST_VERSION / 100 % 1000 << "."  // minor version
+          << BOOST_VERSION % 100                // patch level
+          << std::endl;
+
+	    std::string outFileName = "netwide-model.c";
+    	    std::ofstream outFile;
+    	    outFile.open(outFileName);
+    	    outFile << netModel;
+    	    outFile.close();
 
         } catch (const Util::P4CExceptionBase &bug) {
             std::cerr << bug.what() << std::endl;

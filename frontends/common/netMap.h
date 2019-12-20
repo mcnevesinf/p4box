@@ -16,7 +16,8 @@ class NetMap {
     bool headersOn;
 
     std::map<std::string, std::string> nodeModels;
-    std::string currentNode;
+    std::map<std::string, std::string> stdMeta;
+    std::string currentNodeName;
 };
 
 #endif /* _NETMAP_H_ */

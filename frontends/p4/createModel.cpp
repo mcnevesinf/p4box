@@ -1039,6 +1039,10 @@ void CreateModel::postorder(const IR::P4Parser* parser){
 		}
 	    }
 	    else{
+		//Each node has its own metadata
+		if( paramType == "standard_metadata_t" ){
+	    	    networkMap->stdMeta[networkMap->currentNodeName] = paramName + "_" + networkMap->currentNodeName;
+		}
 	 	inputSymbolization += klee_make_symbolic( paramName );
 		inputDeclaration += paramType + " " + paramName + ";\n";
 	    }
@@ -1227,14 +1231,7 @@ void CreateModel::end_apply(const IR::Node* node){
     model += "\n";
     model += mainFunctionModel;
     
-    std::string outFileName = modelName.c_str();
-    std::size_t p4Suffix = outFileName.find(".p4");
-    outFileName.replace(p4Suffix, 3, ".c");
-
-    std::ofstream outFile;
-    outFile.open(outFileName);
-    outFile << model;
-    outFile.close();
+    networkMap->nodeModels[networkMap->currentNodeName] = model;
 }
 
 }//End P4 namespace
