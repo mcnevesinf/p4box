@@ -84,6 +84,7 @@ class custom_bfs_visitor : public boost::default_bfs_visitor{
     boost::property_map< graph_t, edge_sport_t >::type srcPort;
     boost::property_map< graph_t, edge_dport_t >::type dstPort;
 
+    NetMap networkModelMap;
     std::string* model;
     int level;
 
@@ -99,35 +100,38 @@ class custom_bfs_visitor : public boost::default_bfs_visitor{
 
     public:
 
-	custom_bfs_visitor(graph_t& g, std::string* netModel){
+	custom_bfs_visitor(graph_t& g, std::string* netModel, NetMap netModelMap){
 	    nodeName = get( vertex_name, g);
 	    srcPort = get( edge_sport, g );
 	    dstPort = get( edge_dport, g );
 	    model = netModel;
+	    networkModelMap = netModelMap;
 
     	    level = 1;
 	}
 
 	void discover_vertex(Vertex u, const graph_t& g){
-	    std::cout << "Visiting node " << nodeName[u] << std::endl;
+	    //std::cout << "Visiting node " << nodeName[u] << std::endl;
 	    *model += "void walk_" + nodeName[u] + "(){\n";
-	    *model += "\t//Process node model\n\n";
+	    *model += "\t//Process node model\n";
+	    *model += "\tnodeModel_" + nodeName[u] + "();\n\n";
 
 	    std::pair<edge_iter, edge_iter> es;
-	    Vertex srcVertex;
+	    Vertex srcVertex, dstVertex;
 
 	    //For each edge
 	    for( es = boost::edges(g); es.first != es.second; ++es.first ){
 		Edge e = *es.first;
 		srcVertex = boost::source(e, g);
+		dstVertex = boost::target(e, g);
 		
 		//Model edges that leave current node
 		if( u == srcVertex ){
-		    std::cout << "Src vertex: " << srcVertex << std::endl;
-		    std::cout << "Edge src port: " << srcPort[e] << std::endl;
-		    *model += tabSpacing(level) + "if( output_port == " + std::to_string( srcPort[e] ) + " ){\n";
-		    *model += tabSpacing(level+1) + "input_port = " + std::to_string( dstPort[e] ) + ";\n";
-		    *model += tabSpacing(level+1) + "walk_\n";
+		    //std::cout << "Src vertex: " << srcVertex << std::endl;
+		    //std::cout << "Edge src port: " << srcPort[e] << std::endl;
+		    *model += tabSpacing(level) + "if( " + networkModelMap.stdMeta[nodeName[u]] + ".output_port == " + std::to_string( srcPort[e] ) + " ){\n";
+		    *model += tabSpacing(level+1) + networkModelMap.stdMeta[nodeName[dstVertex]] + ".input_port = " + std::to_string( dstPort[e] ) + ";\n";
+		    *model += tabSpacing(level+1) + "walk_" + nodeName[dstVertex] + "();\n";
 		    *model += tabSpacing(level) + "}\n";
 		    *model += tabSpacing(level) + "else {\n";
 		    level++;
@@ -274,14 +278,14 @@ int main(int argc, char *const argv[]) {
                     P4::FrontEnd frontend;
                     frontend.addDebugHook(hook);
                     program = frontend.extractModel(options, program, networkModelMap);
-		    netModel += networkModelMap.nodeModels[name[v]];
+		    //netModel += networkModelMap.nodeModels[name[v]];
 		    
-		    if(networkModelMap.headersOn){
+		    /*if(networkModelMap.headersOn){
 			std::cout << "Headers successfuly inserted" << std::endl;
                     }
 		    else{
 			std::cout << "Values not updated" << std::endl;
-		    }
+		    }*/
 
                 } catch (const Util::P4CExceptionBase &bug) {
                     std::cerr << bug.what() << std::endl;
@@ -297,9 +301,9 @@ int main(int argc, char *const argv[]) {
 
 	    for( vp = boost::vertices(graph); vp.first != vp.second; ++vp.first ){
 		v = *vp.first;
-		std::cout << "Node name: " << name[v] << std::endl;
+		//std::cout << "Node name: " << name[v] << std::endl;
 		if( name[v] == "a" ){
-		    std::cout << "Set start node" << std::endl;
+		    //std::cout << "Set start node" << std::endl;
 		    break;
 		}
 	    }
@@ -307,12 +311,48 @@ int main(int argc, char *const argv[]) {
 	    //custom_dfs_visitor vis(graph, &netModel);
 	    //boost::depth_first_search( graph, boost::visitor(vis).root_vertex(v) );
 
-	    custom_bfs_visitor vis(graph, &netModel);
+	    //Insert preamble
+	    netModel += "#include <stdio.h>\n"; 
+	    netModel += "#include <stdint.h>\n";
+    	    netModel += "#include \"klee/klee.h\"\n\n";
+
+	    //Insert node models
+	    std::map<std::string, std::string>::iterator nodeIter;
+
+	    for (nodeIter = networkModelMap.nodeModels.begin(); nodeIter != networkModelMap.nodeModels.end(); ++nodeIter){
+		netModel += nodeIter->second; 
+	    }
+	    netModel += "\n";
+
+	    custom_bfs_visitor vis(graph, &netModel, networkModelMap);
 	    boost::breadth_first_search( graph, v, boost::visitor(vis) );
+
+	    //Input symbolization
+	    std::map<std::string, std::string>::iterator metaIter;
+	    std::map<std::string, std::string>::iterator stdMetaIter;
+
+	    netModel += "void symbolizeInputs(){\n";
+
+	    netModel += "\tklee_make_symbolic(&" + networkModelMap.p4boxState + ", sizeof(" + 
+			    networkModelMap.p4boxState + "), \"" + networkModelMap.p4boxState + "\");\n";
+
+	    netModel += "\tklee_make_symbolic(&" + networkModelMap.headers + ", sizeof(" + 
+			    networkModelMap.headers + "), \"" + networkModelMap.headers + "\");\n";
+
+	    for (metaIter = networkModelMap.metaName.begin(); metaIter != networkModelMap.metaName.end(); ++metaIter){
+		netModel += "\tklee_make_symbolic(&" + metaIter->second + ", sizeof(" + metaIter->second + "), \"" + metaIter->second + "\");\n";
+	    }
+
+	    for (stdMetaIter = networkModelMap.stdMeta.begin(); stdMetaIter != networkModelMap.stdMeta.end(); ++stdMetaIter){
+		netModel += "\tklee_make_symbolic(&" + stdMetaIter->second + ", sizeof(" + stdMetaIter->second + "), \"" + stdMetaIter->second + "\");\n";
+	    }
+
+	    netModel += "}\n\n";
 
 	    //Model main function
 	    //TODO: set start port
 	    netModel += "int main(){\n";
+	    netModel += "\tsymbolizeInputs();\n\n";
 	    netModel += "\t" + networkModelMap.stdMeta[name[v]] + ".ingress_port = 0;\n";
 	    netModel += "\twalk_" + name[v] + "();\n";
 	    netModel += "\treturn 0;\n";

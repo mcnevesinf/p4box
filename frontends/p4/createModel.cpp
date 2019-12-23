@@ -79,7 +79,7 @@ std::string CreateModel::memberToC(const IR::Member* member){
         returnString += nodeName;
 
         //Add table ID to function name
-	returnString += "_" + std::to_string( tableIDs[nodeName] );
+	returnString += "_" + networkMap->currentNodeName + "_" + std::to_string( tableIDs[nodeName] );
         returnString += "();";
     }
 
@@ -194,10 +194,36 @@ std::string CreateModel::exprToC(const IR::Expression* expr){
 
 std::string CreateModel::assign(const IR::AssignmentStatement* assignStatem){
     std::string returnString = "";
+    std::string leftOp = "";
+    std::string rightOp = "";
+    size_t pos;
 
-    returnString += lvalueToC( assignStatem->left );
+    leftOp = lvalueToC( assignStatem->left );
+
+    for( int i=0; i < nodeMetaVars.size(); i++ ){
+	pos = leftOp.find( nodeMetaVars[i]+"." );
+
+	if( pos != std::string::npos ){
+	    leftOp.replace(pos, nodeMetaVars[i].length(), nodeMetaVars[i] + "_" + networkMap->currentNodeName);
+	    break;
+	}
+    }
+    
+    returnString += leftOp;
     returnString += " = ";
-    returnString += exprToC( assignStatem->right );
+
+    rightOp = exprToC( assignStatem->right );
+
+    for( int i=0; i < nodeMetaVars.size(); i++ ){
+	pos = rightOp.find( nodeMetaVars[i]+"." );
+
+	if( pos != std::string::npos ){
+	    rightOp.replace(pos, nodeMetaVars[i].length(), nodeMetaVars[i] + "_" + networkMap->currentNodeName);
+	    break;
+	}
+    }
+
+    returnString += rightOp;
     returnString += ";";
 
     return returnString;
@@ -284,6 +310,8 @@ std::pair<std::string, std::string> CreateModel::assertionToC(std::string assert
     std::string keywordIf = "if";
     std::string keywordEqual = "==";
 
+    size_t metaPos;
+
     //Remove blank spaces from assertion string
     for(int i=0; i<assertString.length(); i++){
 	if(assertString[i] == ' '){
@@ -332,7 +360,28 @@ std::pair<std::string, std::string> CreateModel::assertionToC(std::string assert
 	    		}
 
 			std::string left = assertString.substr(0, eqPosition-1);
+
+			//Add node name - left
+    			for( int i=0; i < nodeMetaVars.size(); i++ ){
+			    metaPos = left.find( nodeMetaVars[i]+"." );
+
+			    if( metaPos != std::string::npos ){
+	    			left.replace(metaPos, nodeMetaVars[i].length(), nodeMetaVars[i] + "_" + networkMap->currentNodeName);
+	    			break;
+			    }
+    			}
+
 			std::string right = assertString.substr(eqPosition+1, assertString.length());
+
+			//Add node name - right
+    			for( int i=0; i < nodeMetaVars.size(); i++ ){
+			    metaPos = right.find( nodeMetaVars[i]+"." );
+
+			    if( metaPos != std::string::npos ){
+	    			right.replace(metaPos, nodeMetaVars[i].length(), nodeMetaVars[i] + "_" + networkMap->currentNodeName);
+	    			break;
+			    }
+    			}
 
 			//Create global var
 			for(int i=0; i < left.length(); i++){
@@ -359,6 +408,17 @@ std::pair<std::string, std::string> CreateModel::assertionToC(std::string assert
 			    size_t end = assertString.find(")", begin);
 
 	    		    std::string constantVariable = assertString.substr(begin+1, end-begin-1);
+
+			    //Add node name
+    			    for( int i=0; i < nodeMetaVars.size(); i++ ){
+			        metaPos = constantVariable.find( nodeMetaVars[i]+"." );
+
+			        if( metaPos != std::string::npos ){
+	    			    constantVariable.replace(metaPos, nodeMetaVars[i].length(), nodeMetaVars[i] + "_" + networkMap->currentNodeName);
+	    			    break;
+			        }
+    			    }
+
 			    std::string globalVarName = "constant_" + replaceAllOccurrences(constantVariable, '.', '_') + "_" + std::to_string(assertionCounter);
 			    std::string constantType = "uint64_t"; //TODO: get proper field type
 			    globalDeclarations += constantType + " " + globalVarName + ";\n";
@@ -458,7 +518,8 @@ std::string CreateModel::actionListNoRules(const IR::ActionList* actionList){
 	    actionName = pathToC( pathExpr );
 
             //TODO: Deal with action IDs
-            returnString += "\t\t\t" + actionName + "_" + std::to_string( actionIDs[actionName] ) + "();\n";
+            returnString += "\t\t\t" + actionName + "_" + networkMap->currentNodeName +
+				"_" + std::to_string( actionIDs[actionName] ) + "();\n";
         }
         else{
             if( actionElement->expression->is<IR::MethodCallExpression>() ){
@@ -506,7 +567,8 @@ std::string CreateModel::p4ActionToC(const IR::P4Action* action){
     actionIDs[action->name.toString()] = actionCounter;
     actionCounter++;
 
-    std::string actionName = action->name.toString() + "_" + std::to_string( actionIDs[action->name.toString()] );
+    std::string actionName = action->name.toString() + "_" + networkMap->currentNodeName +
+				"_" + std::to_string( actionIDs[action->name.toString()] );
     nodeCounter++;
 
     //Model action parameters
@@ -635,10 +697,22 @@ std::string CreateModel::actionListWithRules(cstring tableName, const IR::Key* k
 	    }
 
 	    //Model rule match
-	    int i=0;
+	    int i=0, j=0;
+	    size_t pos;
 
 	    for( auto key : keyList->keyElements ){
 		keyName = key->expression->toString();
+
+		//Set match names specific to a device (i.e., metadata)
+		for( j=0; j < nodeMetaVars.size(); j++ ){
+		    pos = keyName.find( nodeMetaVars[j]+"." );
+
+		    if( pos != std::string::npos ){
+		        keyName.replace(pos, nodeMetaVars[j].length(), nodeMetaVars[j] + "_" + networkMap->currentNodeName);
+	    		break;
+		    }
+    		}
+
 		matchType = key->matchType->toString();
 
 		if(matchType == "exact"){
@@ -690,7 +764,7 @@ std::string CreateModel::p4TableToC(const IR::P4Table* table){
     tableCounter++;
 
     returnString += "//Table\n";
-    returnString += "void " + tableName + "(){\n";
+    returnString += "void " + tableName + "_" + networkMap->currentNodeName + "_" + std::to_string( tableIDs[tableName] ) + "(){\n";
 
     std::map<cstring, std::vector<std::vector<std::string>>>::iterator it;
     it = forwardingRules.find(tableName);
@@ -834,7 +908,44 @@ Visitor::profile_t CreateModel::init_apply(const IR::Node *root){
 	else{
 	    std::cout << "ERROR: Unable to open commands file." << std::endl;
 	}
+    }//End of forwarding rule extraction
+
+
+    //Get types and names of input variables (i.e., headers and metadata)
+    if( root->is<IR::P4Program>() ){
+	const IR::P4Program* prog = root->to<IR::P4Program>();
+
+	const IR::P4Parser* parser;
+
+	for( auto decl : prog->declarations ){
+   	    if( decl->is<IR::P4Parser>() ){
+		parser = decl->to<IR::P4Parser>();
+		break;
+	    }
+        }
+
+        const IR::ParameterList* paramList = parser->type->getApplyParameters();
+
+        for( auto param : paramList->parameters ){
+            if( param->hasOut() ){	    
+	        std::string paramName = param->name.toString().c_str();
+	        std::string paramType = param->type->toString().c_str();
+
+	        if(paramType != "headers" && paramType != "packet_in"){
+		    nodeMetaVars.push_back(paramName);
+
+		    if( paramType == "standard_metadata_t" ){
+			networkMap->stdMeta[networkMap->currentNodeName] = paramName + "_" + networkMap->currentNodeName;
+		    }
+		    else{//FIXME: now are assuming the V1Model (i.e., device receives two structures containing metadata)
+			networkMap->metaType[networkMap->currentNodeName] = paramType + "_" + networkMap->currentNodeName;
+		        networkMap->metaName[networkMap->currentNodeName] = paramName + "_" + networkMap->currentNodeName;
+		    }
+	        }
+            }
+        }//End for each parameter
     }
+
 
     //For each monitor
     for( auto monitor : P4boxIR->monitorMap ){
@@ -851,14 +962,16 @@ Visitor::profile_t CreateModel::init_apply(const IR::Node *root){
 	            std::string paramType = param->type->toString().c_str();
 
     	            //Declare parameters
-		    if(paramType == "headers" || paramType == "p4boxState"){
+		    if(paramType == "p4boxState"){
 			if(!networkMap->headersOn){
-			    inputSymbolization += klee_make_symbolic( paramName );
+			    //inputSymbolization += klee_make_symbolic( paramName );
+			    networkMap->p4boxState = paramName;
 	            	    inputDeclaration += paramType + " " + paramName + ";\n";
 		    	    pStateOn = true;
 			}
 		    }
 		    else{
+			//FIXME: should never pass here
 			inputSymbolization += klee_make_symbolic( paramName );
 			inputDeclaration += paramType + " " + paramName + ";\n";
 		    	pStateOn = true;
@@ -896,7 +1009,7 @@ Visitor::profile_t CreateModel::init_apply(const IR::Node *root){
                             newModel.before = true;
                             const IR::MonitorControlBefore* beforeBlock = property->value->to<IR::MonitorControlBefore>();
 
-                            newModel.model += "void " + newModel.monitorName + "_before(){\n\t";
+                            newModel.model += "void " + newModel.monitorName + "_" + networkMap->currentNodeName + "_before(){\n\t";
                             //newModel.model += controlBlockMonitorToC( beforeBlock->body );
                             newModel.model += blockStatementToC( beforeBlock->body );
                             newModel.model += "\n}\n\n";
@@ -905,7 +1018,7 @@ Visitor::profile_t CreateModel::init_apply(const IR::Node *root){
                             newModel.before = false;
                             const IR::MonitorControlAfter* afterBlock = property->value->to<IR::MonitorControlAfter>();
 
-                            newModel.model += "void " + newModel.monitorName + "_after(){\n\t";
+                            newModel.model += "void " + newModel.monitorName + "_" + networkMap->currentNodeName + "_after(){\n\t";
                             //newModel.model += controlBlockMonitorToC( afterBlock->body );
                             newModel.model += blockStatementToC( afterBlock->body );
                             newModel.model += "\n}\n\n";
@@ -982,11 +1095,11 @@ std::string CreateModel::assembleMonitors( std::string progBlock ){
         if( model.monitoredBlock == progBlock ){
             //Assemble before and after monitors separately
             if( model.before == true ){
-                assembleBefore += model.monitorName; 
+                assembleBefore += model.monitorName + "_" + networkMap->currentNodeName; 
                 assembleBefore += "_before();\n\t";
             }
             else{
-                assembleAfter += model.monitorName;
+                assembleAfter += model.monitorName + "_" + networkMap->currentNodeName;
                 assembleAfter += "_after();\n\t";
             }
         }
@@ -1007,8 +1120,8 @@ void CreateModel::postorder(const IR::Declaration_Instance* instance){
     //std::cout << "Dec instance type: " << instance->type->toString() << std::endl;
 
     if( instance->type->toString() == "V1Switch" ){
-        mainFunctionModel += "int nodeModel_" + std::to_string(networkMap->deviceId) + "(){\n\t";
-	mainFunctionModel += "symbolizeInputs_" + std::to_string(networkMap->deviceId) + "();\n\t";
+        mainFunctionModel += "int nodeModel_" + networkMap->currentNodeName + "(){\n\t";
+	//mainFunctionModel += "symbolizeInputs_" + std::to_string(networkMap->deviceId) + "();\n\t";
         mainFunctionModel += assembleMonitors( "ingress" );
         mainFunctionModel += assembleMonitors( "egress" );
 	//mainFunctionModel += "end_assertions();\n\t";
@@ -1032,25 +1145,27 @@ void CreateModel::postorder(const IR::P4Parser* parser){
 	    std::string paramType = param->type->toString().c_str();
 
     	    //Declare parameters
-	    if(paramType == "headers" || paramType == "p4boxState"){
+	    if(paramType == "headers"){
 		if(!networkMap->headersOn){
-		    inputSymbolization += klee_make_symbolic( paramName );
+		    //inputSymbolization += klee_make_symbolic( paramName );
+		    networkMap->headers = paramName;
 		    inputDeclaration += paramType + " " + paramName + ";\n";
 		}
 	    }
 	    else{
 		//Each node has its own metadata
 		if( paramType == "standard_metadata_t" ){
-	    	    networkMap->stdMeta[networkMap->currentNodeName] = paramName + "_" + networkMap->currentNodeName;
+		    inputDeclaration += "standard_metadata_t " + networkMap->stdMeta[networkMap->currentNodeName] + ";\n";
 		}
-	 	inputSymbolization += klee_make_symbolic( paramName );
-		inputDeclaration += paramType + " " + paramName + ";\n";
+		else{
+		    //inputDeclaration += paramType + " " + paramName + ";\n";
+		    inputDeclaration += networkMap->metaType[networkMap->currentNodeName] + " " + 
+			     networkMap->metaName[networkMap->currentNodeName] + ";\n"; 
+		}
 	    }
         }
 
     }
-
-    inputSymbolization += "}\n";
 }
 
 
@@ -1087,12 +1202,19 @@ void CreateModel::postorder(const IR::Type_Header* header){
 void CreateModel::postorder(const IR::Type_Struct* tstruct){
     std::string returnString = "typedef struct {\n";
 
+    std::string nodeStruct = tstruct->name + "_" + networkMap->currentNodeName;
     IR::IndexedVector<IR::StructField> fields = tstruct->fields;
 
     for(auto field : fields){
 	switch( getFieldType(field) ){
 	    case TYPE_NAME:
-		returnString += "\t" + typeNameToC(field->type->to<IR::Type_Name>()) + " " + field->name + ";\n";
+		if( nodeStruct == networkMap->metaType[networkMap->currentNodeName] ){
+		    returnString += "\t" + typeNameToC(field->type->to<IR::Type_Name>()) + "_" + networkMap->currentNodeName +
+					" " + field->name + ";\n";
+		}
+		else{
+		    returnString += "\t" + typeNameToC(field->type->to<IR::Type_Name>()) + " " + field->name + ";\n";
+		}
 		break;
 	    case TYPE_BITS:
 		//TODO: model fields with more than 64 bits properly
@@ -1103,15 +1225,15 @@ void CreateModel::postorder(const IR::Type_Struct* tstruct){
 	}
     }
 
-    returnString += "} " + tstruct->name + ";\n";
-
     //Model headers and p4box state only once
-    if(tstruct->name == "headers" || tstruct->name == "p4boxState"){
+    if(tstruct->name == "headers" || tstruct->name == "p4boxState" || tstruct->name == "standard_metadata_t"){
 	if(!networkMap->headersOn){
+	    returnString += "} " + tstruct->name + ";\n";
     	    modeledStructures.structs.push_back( returnString );
 	}
     }
     else{
+	returnString += "} " + tstruct->name + "_" + networkMap->currentNodeName + ";\n";
 	modeledStructures.structs.push_back( returnString );
     }
 }
@@ -1162,21 +1284,23 @@ void CreateModel::end_apply(const IR::Node* node){
 
     /* Create model for a complete program */
 
-    if(!networkMap->headersOn){
-        model += insertPreamble();
-    }
+    //model += insertPreamble();
 
     model += globalDeclarations;
     model += "\n";
 
-    if(!networkMap->headersOn){
-        model += "void end_assertions();\n\n";
-    }
+    //if(!networkMap->headersOn){
+    //    model += "void end_assertions();\n\n";
+    //}
 
     //Forward declare tables and actions
     //TODO: forward declare parser states
+    //FIXME: check whether it is necessary to forward declare tables and actions
 
-    model += "// Forward declarations for table and action calls";
+    /*if( tableIDs.size() > 0 || actionIDs.size() > 0 ){
+        model += "// Forward declarations for table and action calls";
+    }
+
     for( auto table : tableIDs ){
 	model += "\nvoid " + table.first + "_" + std::to_string(table.second) + "();";
     }
@@ -1185,7 +1309,7 @@ void CreateModel::end_apply(const IR::Node* node){
 	model += "\nvoid " + action.first + "_" + std::to_string(action.second) + "();";
     }
     
-    model += "\n\n";
+    model += "\n\n";*/
 
     model += "// Headers and metadata\n";
     //Add only once into the model
@@ -1223,8 +1347,8 @@ void CreateModel::end_apply(const IR::Node* node){
         model += monitor.model;
     }
 
-    model += inputSymbolization;
-    model += "\n";
+    //model += inputSymbolization;
+    //model += "\n";
 
     //Model assertion checks
     //model += insertAssertionChecks();
@@ -1232,6 +1356,7 @@ void CreateModel::end_apply(const IR::Node* node){
     model += mainFunctionModel;
     
     networkMap->nodeModels[networkMap->currentNodeName] = model;
+    networkMap->headersOn = true;
 }
 
 }//End P4 namespace

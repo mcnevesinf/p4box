@@ -17,7 +17,11 @@ class NetMap {
 
     std::map<std::string, std::string> nodeModels;
     std::map<std::string, std::string> stdMeta;
+    std::map<std::string, std::string> metaName;
+    std::map<std::string, std::string> metaType;
     std::string currentNodeName;
+    std::string p4boxState;
+    std::string headers;
 };
 
 #endif /* _NETMAP_H_ */

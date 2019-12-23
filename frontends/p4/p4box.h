@@ -326,6 +326,7 @@ class CreateModel final : public Inspector {
     std::map<cstring, int> tableIDs;
     std::map<cstring, int> actionIDs;
     std::map<cstring, int> typedefs;
+    std::vector<std::string> nodeMetaVars;
  
     //Map containing forwarding rules
     //Key : table name
