@@ -188,6 +188,9 @@ CompilerOptions::CompilerOptions() : Util::Options(defaultMessage) {
     registerOption("--emitMonitoredP4", "file",
                    [this](const char* arg) { emitMonitoredP4 = true; emitMonitoredP4File = arg; return true; },
                    "Emit P4box instrumented program as a P4 source");
+    registerOption("--topo-file", "file",
+		   [this](const char* arg) { topoFile = arg; return true; },
+		   "Read a Graphviz DOT file describing a network of P4 devices");
     //P4BOX END
     registerUsage("loglevel format is:\n"
                   "  sourceFile:level,...,sourceFile:level\n"

@@ -103,6 +103,7 @@ class CompilerOptions : public Util::Options {
     bool emitMonitoredP4 = false;
     cstring emitMonitoredP4File = nullptr;
     cstring commandsFile = nullptr;
+    cstring topoFile = nullptr;
     //P4BOX END
 
     // Expect that the only remaining argument is the input file.

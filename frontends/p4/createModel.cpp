@@ -104,8 +104,14 @@ std::string CreateModel::methodCallExpressionToC(const IR::MethodCallExpression*
                 returnString += ".isValid = 0;";
             }
             else{
-                returnString += memberToC(member);
-                //std::cout << methodCall->method->toString() << std::endl;
+		if( member->member.toString() == "isValid" ){
+		    returnString += member->expr->toString().c_str();
+		    returnString += ".isValid == 1";
+		}
+		else{
+                    returnString += memberToC(member);
+                    //std::cout << methodCall->method->toString() << std::endl;
+		}//End if isValid
             }//End if setInvalid
         }//End if setValid
     }
@@ -182,7 +188,13 @@ std::string CreateModel::exprToC(const IR::Expression* expr){
 		        returnString += memberToC(member);
 		    }
 		    else{
-		        //TODO: Model other types of expressions
+			if( expr->is<IR::MethodCallExpression>() ){
+			    const IR::MethodCallExpression* methodCall = expr->to<IR::MethodCallExpression>();
+			    returnString += methodCallExpressionToC( methodCall );
+			}
+			else{
+		            //TODO: Model other types of expressions
+			}//End if Method call
 		    }//End if Member
 		}//End if PathExpression
 	    }//End if StringLiteral
@@ -244,6 +256,45 @@ std::string CreateModel::assignmentStatemToC(const IR::AssignmentStatement* assi
 }
 
 
+
+std::string CreateModel::ifStatementToC( const IR::IfStatement* ifStatem ){
+    std::string returnString = "";
+
+    const IR::BlockStatement* block;
+
+    returnString += "if( " + exprToC( ifStatem->condition ) + " ){\n\t\t";
+
+    if( ifStatem->ifTrue->is<IR::BlockStatement>() ){
+	block = ifStatem->ifTrue->to<IR::BlockStatement>();
+        returnString += blockStatementToC( block );
+    }
+    else{
+	std::cout << "ERROR: Only block statements can be modeled inside conditional statements. Maybe you want to use brackets." << std::endl;
+    }
+
+    returnString += "}\n\t";
+
+    if( ifStatem->ifFalse != nullptr ){
+	std::cout << "Process else" << std::endl;
+
+	returnString += "else{\n\t\t";
+	
+	if( ifStatem->ifFalse->is<IR::BlockStatement>() ){
+	    block = ifStatem->ifFalse->to<IR::BlockStatement>();
+            returnString += blockStatementToC( block );
+        }
+        else{
+	    std::cout << "ERROR: Only block statements can be modeled inside conditional statements. Maybe you want to use brackets." << std::endl;
+        }
+
+	returnString += "}\n\t";
+
+    }
+
+    return returnString;
+}
+
+
 //std::string CreateModel::controlBlockMonitorToC(IR::BlockStatement body){
 std::string CreateModel::blockStatementToC(IR::BlockStatement body){
 
@@ -271,10 +322,16 @@ std::string CreateModel::blockStatementToC(IR::BlockStatement body){
                 returnString += assignmentStatemToC(assignStatem) + "\n\t";
             }
 	    else{
-		if( component->is<IR::BlockStatement>() ){
-		    const IR::BlockStatement* blockStatem = component->to<IR::BlockStatement>();
-		    returnString += blockStatementToC( blockStatem ) + "\n\t";
+		if( component->is<IR::IfStatement>() ){
+		    const IR::IfStatement* ifStatem = component->to<IR::IfStatement>();
+		    returnString += ifStatementToC( ifStatem ) + "\n\t";
 		}
+		else{
+		    if( component->is<IR::BlockStatement>() ){
+		        const IR::BlockStatement* blockStatem = component->to<IR::BlockStatement>();
+		        returnString += blockStatementToC( blockStatem ) + "\n\t";
+		    }
+		}//End IF conditional statement
 	    }//End IF assignment statement
         }//End IF MethodCallStatement
 

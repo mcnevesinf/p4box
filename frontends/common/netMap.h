@@ -10,6 +10,8 @@ class NetMap {
     NetMap(){
 	deviceId = 1;
 	headersOn = false;
+
+	p4boxState = "";
     }
 
     int deviceId;

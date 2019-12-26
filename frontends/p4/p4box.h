@@ -366,6 +366,7 @@ class CreateModel final : public Inspector {
     std::string constantToC(const IR::Constant* intConst);
     std::string convertExactMatchValue(std::string value);
     std::string exprToC(const IR::Expression* expr);
+    std::string ifStatementToC(const IR::IfStatement* ifStatem );
     std::string insertAssertionChecks(void);
     std::string insertPreamble(void);
     std::string methodCallExpressionToC(const IR::MethodCallExpression* methodCall);

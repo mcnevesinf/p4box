@@ -242,8 +242,8 @@ int main(int argc, char *const argv[]) {
 	    dp.property( "dport", dst_ports );
 
             // Sample graph as an std::istream;
-            //std::istringstream gvgraph("digraph { graph [name=\"graphname\"]  a  c e g h }");
-            std::ifstream inputTopology("example-p4box-topology.txt");
+            //std::ifstream inputTopology("example-p4box-topology.txt");
+	    std::ifstream inputTopology( options.topoFile );
 
             bool status = boost::read_graphviz( inputTopology, graph, dp, "node_id" );
             //End of topology reading
@@ -333,8 +333,10 @@ int main(int argc, char *const argv[]) {
 
 	    netModel += "void symbolizeInputs(){\n";
 
-	    netModel += "\tklee_make_symbolic(&" + networkModelMap.p4boxState + ", sizeof(" + 
+	    if( networkModelMap.p4boxState != "" ){
+		netModel += "\tklee_make_symbolic(&" + networkModelMap.p4boxState + ", sizeof(" + 
 			    networkModelMap.p4boxState + "), \"" + networkModelMap.p4boxState + "\");\n";
+	    }
 
 	    netModel += "\tklee_make_symbolic(&" + networkModelMap.headers + ", sizeof(" + 
 			    networkModelMap.headers + "), \"" + networkModelMap.headers + "\");\n";
