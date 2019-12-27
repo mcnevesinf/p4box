@@ -360,7 +360,10 @@ class CreateModel final : public Inspector {
 
     std::string actionListNoRules(const IR::ActionList* actionList);
     std::string actionListWithRules(cstring tableName, const IR::Key* keyList);
+    std::string addToC(const IR::Add* addExpr);
     std::pair<std::string, std::string> assertionToC(std::string assertString);
+    std::string assign(const IR::AssignmentStatement* assignStatem);
+    std::string assignmentStatemToC(const IR::AssignmentStatement* assignStatem);
     std::string blockStatementToC(IR::BlockStatement body);
     std::string blockStatementToC(const IR::BlockStatement* body);
     std::string constantToC(const IR::Constant* intConst);
@@ -369,18 +372,17 @@ class CreateModel final : public Inspector {
     std::string ifStatementToC(const IR::IfStatement* ifStatem );
     std::string insertAssertionChecks(void);
     std::string insertPreamble(void);
-    std::string methodCallExpressionToC(const IR::MethodCallExpression* methodCall);
-    std::string protectedStructToC(const IR::Type_ProtectedStruct* pstruct);
-    std::string replaceAllOccurrences(std::string oldString, char oldChar, char newChar);
-    std::string stringLiteralToC(const IR::StringLiteral* strLit);
-    std::string assignmentStatemToC(const IR::AssignmentStatement* assignStatem);
     std::string lvalueToC(const IR::Expression* lvalue);
-    std::string assign(const IR::AssignmentStatement* assignStatem);
+    std::string memberToC(const IR::Member* member);
+    std::string methodCallExpressionToC(const IR::MethodCallExpression* methodCall);
     std::string p4ActionToC(const IR::P4Action* action);
     std::string p4ParserToC(const IR::P4Parser* parser);
     std::string p4TableToC(const IR::P4Table* table);
     std::string pathToC(const IR::PathExpression* pathExpr);
-    std::string memberToC(const IR::Member* member);
+    std::string protectedStructToC(const IR::Type_ProtectedStruct* pstruct);
+    std::string replaceAllOccurrences(std::string oldString, char oldChar, char newChar);
+    std::string stringLiteralToC(const IR::StringLiteral* strLit);
+    std::string subToC(const IR::Sub* subExpr);
     std::string typeNameToC(const IR::Type_Name* tName);
     
     bool isExternal(bool placeholder);

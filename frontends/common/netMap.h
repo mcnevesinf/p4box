@@ -12,6 +12,7 @@ class NetMap {
 	headersOn = false;
 
 	p4boxState = "";
+	forwardDeclarations = "";
     }
 
     int deviceId;
@@ -24,6 +25,7 @@ class NetMap {
     std::string currentNodeName;
     std::string p4boxState;
     std::string headers;
+    std::string forwardDeclarations;
 };
 
 #endif /* _NETMAP_H_ */

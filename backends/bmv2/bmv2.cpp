@@ -129,8 +129,8 @@ class custom_bfs_visitor : public boost::default_bfs_visitor{
 		if( u == srcVertex ){
 		    //std::cout << "Src vertex: " << srcVertex << std::endl;
 		    //std::cout << "Edge src port: " << srcPort[e] << std::endl;
-		    *model += tabSpacing(level) + "if( " + networkModelMap.stdMeta[nodeName[u]] + ".output_port == " + std::to_string( srcPort[e] ) + " ){\n";
-		    *model += tabSpacing(level+1) + networkModelMap.stdMeta[nodeName[dstVertex]] + ".input_port = " + std::to_string( dstPort[e] ) + ";\n";
+		    *model += tabSpacing(level) + "if( " + networkModelMap.stdMeta[nodeName[u]] + ".egress_spec == " + std::to_string( srcPort[e] ) + " ){\n";
+		    *model += tabSpacing(level+1) + networkModelMap.stdMeta[nodeName[dstVertex]] + ".ingress_port = " + std::to_string( dstPort[e] ) + ";\n";
 		    *model += tabSpacing(level+1) + "walk_" + nodeName[dstVertex] + "();\n";
 		    *model += tabSpacing(level) + "}\n";
 		    *model += tabSpacing(level) + "else {\n";
@@ -260,6 +260,10 @@ int main(int argc, char *const argv[]) {
                 //TODO: remove debug code
 		std::cout << name[v] << std::endl;
 		networkModelMap.currentNodeName = name[v];
+		
+		//Forward declare walk functions
+		networkModelMap.forwardDeclarations += "void walk_" + name[v] + "();\n";
+
                 std::cout << p4program[v] << std::endl;
 		//std::cout << "p4commands: " << p4commands[v] << std::endl;
 
@@ -315,6 +319,9 @@ int main(int argc, char *const argv[]) {
 	    netModel += "#include <stdio.h>\n"; 
 	    netModel += "#include <stdint.h>\n";
     	    netModel += "#include \"klee/klee.h\"\n\n";
+
+	    //Forward declare walk functions
+	    netModel += networkModelMap.forwardDeclarations + "\n";
 
 	    //Insert node models
 	    std::map<std::string, std::string>::iterator nodeIter;

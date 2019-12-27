@@ -165,6 +165,24 @@ std::string CreateModel::lvalueToC(const IR::Expression* lvalue){
 }
 
 
+std::string CreateModel::addToC(const IR::Add* addExpr){
+    std::string returnString = "";
+
+    returnString += exprToC( addExpr->left ) + " + " + exprToC( addExpr->right );
+
+    return returnString;
+}
+
+
+std::string CreateModel::subToC(const IR::Sub* subExpr){
+    std::string returnString = "";
+
+    returnString += exprToC( subExpr->left ) + " - " + exprToC( subExpr->right );
+
+    return returnString;
+}
+
+
 std::string CreateModel::exprToC(const IR::Expression* expr){
     std::string returnString = "";
 
@@ -193,6 +211,14 @@ std::string CreateModel::exprToC(const IR::Expression* expr){
 			    returnString += methodCallExpressionToC( methodCall );
 			}
 			else{
+			    if( expr->is<IR::Add>() ){
+				const IR::Add* addExpr = expr->to<IR::Add>();
+				returnString += addToC( addExpr );
+			    } else
+			    if( expr->is<IR::Sub>() ){
+				const IR::Sub* subExpr = expr->to<IR::Sub>();
+				returnString += subToC( subExpr );
+			    }
 		            //TODO: Model other types of expressions
 			}//End if Method call
 		    }//End if Member
@@ -541,7 +567,7 @@ std::string CreateModel::klee_make_symbolic(std::string var){
     std::string returnString = "";
 
     //TODO: Process case when "var" contains a "."
-    returnString += "\tklee_make_symbolic(&" + var + ", sizeof(" + var + "), \"" + var + "\");\n";
+    returnString += "\tklee_make_symbolic(&" + var + ", sizeof(" + var + "), \"" + var + "\");\n\t";
 
     return returnString;
 }
@@ -1177,7 +1203,7 @@ void CreateModel::postorder(const IR::Declaration_Instance* instance){
     //std::cout << "Dec instance type: " << instance->type->toString() << std::endl;
 
     if( instance->type->toString() == "V1Switch" ){
-        mainFunctionModel += "int nodeModel_" + networkMap->currentNodeName + "(){\n\t";
+        mainFunctionModel += "void nodeModel_" + networkMap->currentNodeName + "(){\n\t";
 	//mainFunctionModel += "symbolizeInputs_" + std::to_string(networkMap->deviceId) + "();\n\t";
         mainFunctionModel += assembleMonitors( "ingress" );
         mainFunctionModel += assembleMonitors( "egress" );
