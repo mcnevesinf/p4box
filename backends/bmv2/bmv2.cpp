@@ -200,6 +200,27 @@ class custom_dfs_visitor : public boost::default_dfs_visitor{
 	}	
 };
 
+
+std::string insertAssertionChecks( NetMap networkModelMap ){
+    std::string returnString = "";
+
+    returnString += "void assert_error(char* msg){\n";
+    returnString += "\tprintf(\"%s\n\", msg);\n";
+    returnString += "}\n\n";
+
+    returnString += "void end_assertions(){\n";
+    
+    for( auto logicExpr : networkModelMap.logicalExpressionList ){
+	std::cout << "Logical expression: " << logicExpr << std::endl;
+	returnString += "\tif( !(" + logicExpr + ") ) assert_error(\"" + logicExpr + "\");\n";
+    }
+
+    returnString += "}\n";
+
+    return returnString;
+}
+
+
 int main(int argc, char *const argv[]) {
     setup_gc_logging();
 
@@ -320,6 +341,9 @@ int main(int argc, char *const argv[]) {
 	    netModel += "#include <stdint.h>\n";
     	    netModel += "#include \"klee/klee.h\"\n\n";
 
+	    //Insert assertion variables
+	    netModel += networkModelMap.globalDeclarations + "\n";
+
 	    //Forward declare walk functions
 	    netModel += networkModelMap.forwardDeclarations + "\n";
 
@@ -327,7 +351,7 @@ int main(int argc, char *const argv[]) {
 	    std::map<std::string, std::string>::iterator nodeIter;
 
 	    for (nodeIter = networkModelMap.nodeModels.begin(); nodeIter != networkModelMap.nodeModels.end(); ++nodeIter){
-		netModel += nodeIter->second; 
+		netModel += nodeIter->second + "\n"; 
 	    }
 	    netModel += "\n";
 
@@ -358,12 +382,16 @@ int main(int argc, char *const argv[]) {
 
 	    netModel += "}\n\n";
 
+	    //Model assertion checks
+	    netModel += insertAssertionChecks( networkModelMap ) + "\n";
+
 	    //Model main function
 	    //TODO: set start port
 	    netModel += "int main(){\n";
 	    netModel += "\tsymbolizeInputs();\n\n";
 	    netModel += "\t" + networkModelMap.stdMeta[name[v]] + ".ingress_port = 0;\n";
 	    netModel += "\twalk_" + name[v] + "();\n";
+	    netModel += "\tend_assertions();\n";
 	    netModel += "\treturn 0;\n";
 	    netModel += "}\n";
 

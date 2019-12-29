@@ -301,7 +301,6 @@ std::string CreateModel::ifStatementToC( const IR::IfStatement* ifStatem ){
     returnString += "}\n\t";
 
     if( ifStatem->ifFalse != nullptr ){
-	std::cout << "Process else" << std::endl;
 
 	returnString += "else{\n\t\t";
 	
@@ -395,9 +394,9 @@ std::pair<std::string, std::string> CreateModel::assertionToC(std::string assert
 
     size_t metaPos;
 
-    //Remove blank spaces from assertion string
+    //Remove blank spaces and quotation marks from assertion string
     for(int i=0; i<assertString.length(); i++){
-	if(assertString[i] == ' '){
+	if(assertString[i] == ' ' || assertString[i] == '\"'){
 	    assertString.replace(i, 1, "");
 	}
     }
@@ -467,21 +466,11 @@ std::pair<std::string, std::string> CreateModel::assertionToC(std::string assert
     			}
 
 			//Create global var
-			for(int i=0; i < left.length(); i++){
-				if( left[i] == '.' ){
-					left[i] = '_';
-				}
-			}
-
-			for(int i=0; i < right.length(); i++){
-				if( right[i] == '.' ){
-					right[i] = '_';
-				}
-			}
-
 			std::string globalVarName = "";
-			globalVarName += left + "_eq_" + right + "_" + std::to_string(assertionCounter);			
-			globalDeclarations += "int " + globalVarName + ";\n";
+			globalVarName += replaceAllOccurrences(left, '.', '_') + "_eq_" + 
+					 replaceAllOccurrences(right, '.', '_') + "_" + 
+					 std::to_string(assertionCounter);			
+			networkMap->globalDeclarations += "int " + globalVarName + ";\n";
 			assertionModel.second = globalVarName;
 			assertionModel.first = globalVarName + " = (" + left + " == " + right + ");\n\t";
 		}
@@ -504,7 +493,7 @@ std::pair<std::string, std::string> CreateModel::assertionToC(std::string assert
 
 			    std::string globalVarName = "constant_" + replaceAllOccurrences(constantVariable, '.', '_') + "_" + std::to_string(assertionCounter);
 			    std::string constantType = "uint64_t"; //TODO: get proper field type
-			    globalDeclarations += constantType + " " + globalVarName + ";\n";
+			    networkMap->globalDeclarations += constantType + " " + globalVarName + ";\n";
 
 			    assertionModel.first += globalVarName + " = " + constantVariable + ";";
 			    assertionModel.second += globalVarName + " == " + constantVariable;
@@ -534,7 +523,7 @@ std::string CreateModel::blockStatementToC(const IR::BlockStatement* body){
 		    assertionModel = assertionToC(assertString); 
 		    assertionCounter++;
 		    returnString += assertionModel.first;
-		    logicalExpressionList.push_back( assertionModel.second );
+		    networkMap->logicalExpressionList.push_back( assertionModel.second );
 		}
 	    }	
 	}
@@ -1344,14 +1333,14 @@ std::string CreateModel::insertPreamble(void){
 }
 
 
-std::string CreateModel::insertAssertionChecks(void){
+/*std::string CreateModel::insertAssertionChecks(void){
     std::string returnString = "";
 
     returnString += "void assert_error(char* msg){\n";
     returnString += "\tprintf(\"%s\", msg);\n";
     returnString += "}\n\n";
 
-    returnString += "void end_assertions(){\n";
+    returnString += "void end_assertions_" + networkMap->currentNodeName + "(){\n";
     
     for( auto logicExpr : logicalExpressionList ){
 	returnString += "\tif( !(" + logicExpr + ") ) assert_error(\"" + logicExpr + "\");\n";
@@ -1360,7 +1349,7 @@ std::string CreateModel::insertAssertionChecks(void){
     returnString += "}\n";
 
     return returnString;
-}
+}*/
 
 
 void CreateModel::end_apply(const IR::Node* node){
@@ -1369,8 +1358,8 @@ void CreateModel::end_apply(const IR::Node* node){
 
     //model += insertPreamble();
 
-    model += globalDeclarations;
-    model += "\n";
+    //model += globalDeclarations;
+    //model += "\n";
 
     //if(!networkMap->headersOn){
     //    model += "void end_assertions();\n\n";

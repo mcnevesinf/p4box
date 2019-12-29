@@ -12,6 +12,7 @@ class NetMap {
 	headersOn = false;
 
 	p4boxState = "";
+	globalDeclarations = "";
 	forwardDeclarations = "";
     }
 
@@ -25,7 +26,9 @@ class NetMap {
     std::string currentNodeName;
     std::string p4boxState;
     std::string headers;
+    std::string globalDeclarations;
     std::string forwardDeclarations;
+    std::vector<std::string> logicalExpressionList;
 };
 
 #endif /* _NETMAP_H_ */

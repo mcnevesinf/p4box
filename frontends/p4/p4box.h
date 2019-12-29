@@ -339,9 +339,8 @@ class CreateModel final : public Inspector {
     std::string mainFunctionModel;
     std::string inputDeclaration;
     std::string inputSymbolization;
-    std::string globalDeclarations;
 
-    std::vector<std::string> logicalExpressionList;
+    //std::vector<std::string> logicalExpressionList;
 
     bool pStateOn;
 
@@ -404,7 +403,6 @@ class CreateModel final : public Inspector {
         model = "";
 	inputDeclaration = "";
 	inputSymbolization = "void symbolizeInputs(){\n";
-	globalDeclarations = "";
 
 	pStateOn = false;
 
