@@ -335,6 +335,7 @@ class CreateModel final : public Inspector {
 
     cstring modelName;
     cstring commandsFile;
+    cstring archType;
     std::string model;
     std::string mainFunctionModel;
     std::string inputDeclaration;
@@ -392,6 +393,7 @@ class CreateModel final : public Inspector {
     CreateModel( const CompilerOptions& options, SupervisorMap *map, NetMap& networkModelMap ){
         modelName = options.file;
 	commandsFile = options.commandsFile;
+	archType = options.archModel;
         P4boxIR = map;
 	networkMap = &networkModelMap;
 

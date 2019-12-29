@@ -46,12 +46,14 @@ using namespace boost;
 namespace boost {
     enum vertex_program_t { vertex_program };
     enum vertex_commands_t { vertex_commands };
+    enum vertex_arch_t { vertex_arch };
 
     enum edge_sport_t { edge_sport };
     enum edge_dport_t { edge_dport };
 
     BOOST_INSTALL_PROPERTY( vertex, program );
     BOOST_INSTALL_PROPERTY( vertex, commands );
+    BOOST_INSTALL_PROPERTY( vertex, arch );
     BOOST_INSTALL_PROPERTY( edge, sport );
     BOOST_INSTALL_PROPERTY( edge, dport );
 }
@@ -59,7 +61,8 @@ namespace boost {
             //Vertex properties
             typedef boost::property< vertex_program_t, std::string > DataPlaneProgram;
 	    typedef boost::property< vertex_commands_t, std::string, DataPlaneProgram > ForwardingRules;
-            typedef boost::property< vertex_name_t, std::string, ForwardingRules > vertex_p;
+	    typedef boost::property< vertex_arch_t, std::string, ForwardingRules > Arch;
+            typedef boost::property< vertex_name_t, std::string, Arch > vertex_p;
 
 	    //Edge properties
 	    typedef boost::property< edge_sport_t, int > SrcPort;
@@ -256,6 +259,9 @@ int main(int argc, char *const argv[]) {
 	    boost::property_map< graph_t, vertex_commands_t >::type p4commands = get( vertex_commands, graph );
 	    dp.property( "commands", p4commands );
 
+	    boost::property_map< graph_t, vertex_arch_t >::type p4arch = get( vertex_arch, graph );
+	    dp.property( "arch", p4arch );
+
 	    boost::property_map< graph_t, edge_sport_t >::type src_ports = get( edge_sport, graph );
 	    dp.property( "sport", src_ports );
 
@@ -291,6 +297,7 @@ int main(int argc, char *const argv[]) {
                 options.preprocessor_options += " -D__TARGET_BMV2__";
                 options.file = p4program[v];
 		options.commandsFile = p4commands[v];
+		options.archModel = p4arch[v];
                 auto program = P4::parseP4File(options);
 
                 if (program == nullptr || ::errorCount() > 0)
@@ -340,6 +347,13 @@ int main(int argc, char *const argv[]) {
 	    netModel += "#include <stdio.h>\n"; 
 	    netModel += "#include <stdint.h>\n";
     	    netModel += "#include \"klee/klee.h\"\n\n";
+
+	    //Insert libraries describing architecture models
+	    for( auto arch : networkModelMap.archTypes ){
+		netModel += "#include \"" + arch + ".h\"\n";
+	    }
+
+	    netModel += "\n";
 
 	    //Insert assertion variables
 	    netModel += networkModelMap.globalDeclarations + "\n";

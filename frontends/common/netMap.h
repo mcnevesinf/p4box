@@ -19,6 +19,7 @@ class NetMap {
     int deviceId;
     bool headersOn;
 
+    std::vector<std::string> archTypes;
     std::map<std::string, std::string> nodeModels;
     std::map<std::string, std::string> stdMeta;
     std::map<std::string, std::string> metaName;

@@ -115,6 +115,15 @@ std::string CreateModel::methodCallExpressionToC(const IR::MethodCallExpression*
             }//End if setInvalid
         }//End if setValid
     }
+    else{
+	if( methodCall->method->is<IR::PathExpression>() ){
+	    const IR::PathExpression* pathExpr = methodCall->method->to<IR::PathExpression>();
+
+	    returnString += pathExpr->toString() + "();\n";
+	    
+	    //std::cout << "Method call: " << pathExpr->toString() << std::endl;
+	}
+    }
 
     return returnString;
 }
@@ -1355,6 +1364,20 @@ std::string CreateModel::insertPreamble(void){
 void CreateModel::end_apply(const IR::Node* node){
 
     /* Create model for a complete program */
+
+    //Check whether device contains a new architecture model
+    bool archFound = false;
+
+    for( auto archElem : networkMap->archTypes ){
+	if( archType == archElem ){
+	    archFound = true;
+	    break;
+	}
+    }
+
+    if( !archFound ){
+	networkMap->archTypes.push_back( archType.c_str() );
+    }
 
     //model += insertPreamble();
 
