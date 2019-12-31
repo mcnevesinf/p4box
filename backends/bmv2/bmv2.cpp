@@ -208,7 +208,7 @@ std::string insertAssertionChecks( NetMap networkModelMap ){
     std::string returnString = "";
 
     returnString += "void assert_error(char* msg){\n";
-    returnString += "\tprintf(\"%s\n\", msg);\n";
+    returnString += "\tprintf(\"%s\\n\", msg);\n";
     returnString += "}\n\n";
 
     returnString += "void end_assertions(){\n";
