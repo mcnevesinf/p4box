@@ -214,7 +214,6 @@ std::string insertAssertionChecks( NetMap networkModelMap ){
     returnString += "void end_assertions(){\n";
     
     for( auto logicExpr : networkModelMap.logicalExpressionList ){
-	std::cout << "Logical expression: " << logicExpr << std::endl;
 	returnString += "\tif( !(" + logicExpr + ") ) assert_error(\"" + logicExpr + "\");\n";
     }
 

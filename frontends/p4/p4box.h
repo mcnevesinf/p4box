@@ -380,7 +380,7 @@ class CreateModel final : public Inspector {
     std::string p4TableToC(const IR::P4Table* table);
     std::string pathToC(const IR::PathExpression* pathExpr);
     std::string protectedStructToC(const IR::Type_ProtectedStruct* pstruct);
-    std::string replaceAllOccurrences(std::string oldString, char oldChar, char newChar);
+    std::string replaceAllOccurrences(std::string oldString, char* oldChar, char* newChar);
     std::string stringLiteralToC(const IR::StringLiteral* strLit);
     std::string subToC(const IR::Sub* subExpr);
     std::string typeNameToC(const IR::Type_Name* tName);

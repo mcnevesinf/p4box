@@ -375,12 +375,14 @@ std::string CreateModel::blockStatementToC(IR::BlockStatement body){
 }
 
 
-std::string CreateModel::replaceAllOccurrences(std::string oldString, char oldChar, char newChar){
+std::string CreateModel::replaceAllOccurrences(std::string oldString, char* oldChar, char* newChar){
     std::string newString = "";
 
     for( auto it=oldString.begin(); it != oldString.end(); ++it ){
-	if( *it == oldChar ){
-	    newString += newChar;
+	if( *it == *oldChar ){
+	    if( newChar != nullptr ){
+	        newString += newChar;
+	    }
 	}
 	else{
 	    newString += *it;
@@ -400,6 +402,9 @@ std::pair<std::string, std::string> CreateModel::assertionToC(std::string assert
     std::string keywordConstant = "constant";
     std::string keywordIf = "if";
     std::string keywordEqual = "==";
+
+    char dot = '.';
+    char underline = '_';
 
     size_t metaPos;
 
@@ -476,8 +481,8 @@ std::pair<std::string, std::string> CreateModel::assertionToC(std::string assert
 
 			//Create global var
 			std::string globalVarName = "";
-			globalVarName += replaceAllOccurrences(left, '.', '_') + "_eq_" + 
-					 replaceAllOccurrences(right, '.', '_') + "_" + 
+			globalVarName += replaceAllOccurrences(left, &dot, &underline) + "_eq_" + 
+					 replaceAllOccurrences(right, &dot, &underline) + "_" + 
 					 std::to_string(assertionCounter);			
 			networkMap->globalDeclarations += "int " + globalVarName + ";\n";
 			assertionModel.second = globalVarName;
@@ -500,7 +505,7 @@ std::pair<std::string, std::string> CreateModel::assertionToC(std::string assert
 			        }
     			    }
 
-			    std::string globalVarName = "constant_" + replaceAllOccurrences(constantVariable, '.', '_') + "_" + std::to_string(assertionCounter);
+			    std::string globalVarName = "constant_" + replaceAllOccurrences(constantVariable, &dot, &underline) + "_" + std::to_string(assertionCounter);
 			    std::string constantType = "uint64_t"; //TODO: get proper field type
 			    networkMap->globalDeclarations += constantType + " " + globalVarName + ";\n";
 
@@ -659,6 +664,8 @@ std::string CreateModel::p4ActionToC(const IR::P4Action* action){
     // (including directionless ones) must be supplied.
     // In this case, directionless parameters behave like "in" parameters
     std::string actionData = "";
+    std::string paramModel = "";
+    std::string parameters = "";
     const IR::IndexedVector<IR::Parameter> paramList = action->parameters->parameters;
 
     for( auto parameter : paramList ){
@@ -667,27 +674,46 @@ std::string CreateModel::p4ActionToC(const IR::P4Action* action){
         if( parameter->direction == IR::Direction::None ){
 
             //TODO: If manipulating forwarding rules
+	    if( forwardingRules.size() > 0 ){
+		paramModel = "";
+		
+		if( parameter->type->is<IR::Type_Bits>() ){
+                    const IR::Type_Bits* parameterType = parameter->type->to<IR::Type_Bits>();
+                    paramModel += bitSizeToType( parameterType->size ) + " " + parameter->name;
+                }
+                else{
+                    //TODO: Model any other type of parameter
+                }//End IF Type_Bit parameter
 
-            //If NOT manipulating forwarding rules
+		parameters += paramModel + ", ";
+	    }
+	    else{
 
-            //IF Type_bit parameter (e.g., bit<32> x)
-            if( parameter->type->is<IR::Type_Bits>() ){
-                const IR::Type_Bits* parameterType = parameter->type->to<IR::Type_Bits>();
-                actionData += bitSizeToType( parameterType->size ) + " " + parameter->name + ";\n";
-            }
-            else{
-                //TODO: Model any other type of parameter
-            }//End IF Type_Bit parameter
+                //IF Type_bit parameter (e.g., bit<32> x)
+                if( parameter->type->is<IR::Type_Bits>() ){
+                    const IR::Type_Bits* parameterType = parameter->type->to<IR::Type_Bits>();
+                    actionData += bitSizeToType( parameterType->size ) + " " + parameter->name + ";\n";
+                }
+                else{
+                    //TODO: Model any other type of parameter
+                }//End IF Type_Bit parameter
 
-            actionData += klee_make_symbolic( parameter->name.toString().c_str() );
+                actionData += klee_make_symbolic( parameter->name.toString().c_str() );
+
+	    }//End if manipulating forwarding rules
         }
         else{
             //TODO: Data plane (derected) parameter
         }
     }
 
+    //Remove comma after last parameter
+    if( parameters != "" ){
+	parameters = parameters.substr(0, parameters.length()-2);
+    }
+
     returnString += "//Action\n";
-    returnString += "void " + actionName + "(" + "){\n\t";
+    returnString += "void " + actionName + "( " + parameters + " ){\n\t";
     returnString += actionData;
     returnString += blockStatementToC( action->body );
     returnString += "\n}\n\n";
@@ -706,40 +732,51 @@ std::string CreateModel::p4ParserToC(const IR::P4Parser* parser){
 std::string CreateModel::convertExactMatchValue(std::string value){
     std::string returnString = "";
 
-    size_t matchDelimiter = value.find('.', 0);
+    size_t matchDelimiter = value.find(':', 0);
     size_t begin, end, substrLen;
 
-    //TODO: convert other match types (e.g., MAC values)
+    //TODO: convert other match types (e.g., ?)
     if( matchDelimiter != std::string::npos ){
-	//Convert IP value
-	begin = 0;
-
-	std::string octet;
-	int i_octet;
-	std::string bitIP = "";
-
-	for(int i=0; i<4; i++){
-	    substrLen = matchDelimiter - begin;
-	    octet = value.substr(begin, substrLen);
-
-	    i_octet = std::stoi(octet, nullptr, 10);
-	    bitIP += std::bitset<8>(i_octet).to_string();
-
-	    begin = matchDelimiter+1;
-	    matchDelimiter = value.find('.', begin);
-	
-	    if( matchDelimiter == std::string::npos ){
-		matchDelimiter = value.length();
-	    }
-        }
-
-	unsigned long intIP = std::bitset<32>(bitIP).to_ulong();
-	returnString = std::to_string(intIP);
+	//MAC value
+	char macDelim = ':';
+	std::string strMAC = replaceAllOccurrences(value, &macDelim, nullptr);
+	uint64_t intMAC = std::stoul( strMAC, nullptr, 16 );
+	returnString = std::to_string( intMAC );
     }
     else{
-	//Integer values
-	returnString += value;
-    }
+	matchDelimiter = value.find('.', 0);
+
+	if( matchDelimiter != std::string::npos ){
+	    //Convert IP value
+	    begin = 0;
+
+	    std::string octet;
+	    int i_octet;
+	    std::string bitIP = "";
+
+	    for(int i=0; i<4; i++){
+	        substrLen = matchDelimiter - begin;
+	        octet = value.substr(begin, substrLen);
+
+	        i_octet = std::stoi(octet, nullptr, 10);
+	        bitIP += std::bitset<8>(i_octet).to_string();
+
+	        begin = matchDelimiter+1;
+	        matchDelimiter = value.find('.', begin);
+	
+	        if( matchDelimiter == std::string::npos ){
+		    matchDelimiter = value.length();
+	        }
+            }
+
+	    unsigned long intIP = std::bitset<32>(bitIP).to_ulong();
+	    returnString = std::to_string(intIP);
+        }
+        else{
+	    //Integer values
+	    returnString += value;
+        }//End if IP value
+    }//End if MAC value
 
     return returnString;
 }
@@ -751,8 +788,10 @@ std::string CreateModel::actionListWithRules(cstring tableName, const IR::Key* k
     std::string match = "";
     std::string keyName = "";
     std::string matchType = "";
+    std::string arguments = "";
 
     std::vector<std::string> matchValues;
+    std::vector<std::string> actionParameters;
 
     bool tableAdd = false;
     std::string defaultAction;
@@ -809,15 +848,47 @@ std::string CreateModel::actionListWithRules(cstring tableName, const IR::Key* k
 
 	    match = match.substr(0, match.length()-4);
 
-	    //TODO: Model action parameters
+	    //Model action arguments
+	    
+	    //Extract arguments from forwarding rule
+	    if( rule.size() > 3 ){
+		size_t argBegin = 1;
+		size_t argEnd = rule[3].find(' ', argBegin);
+		size_t argLen;
+		std::string argValue;
+
+		while( argEnd != std::string::npos ){
+		    argLen = argEnd - argBegin;
+		    argValue = rule[3].substr(argBegin, argLen);
+		    actionParameters.push_back(argValue);
+
+		    argBegin = argEnd+1;
+		    argEnd = rule[3].find(' ', argBegin);
+	        }
+
+		argLen = argEnd - argBegin;
+		argValue = rule[3].substr(argBegin, argLen);
+		actionParameters.push_back(argValue);
+
+	    }
+	    
+	    for( auto param : actionParameters ){
+		arguments += convertExactMatchValue(param) + ", ";
+	    }
+
+	    arguments = arguments.substr(0, arguments.length()-2);
+
+	    std::string fullActionName = rule[1] + "_" + networkMap->currentNodeName + "_" + std::to_string(actionIDs[rule[1]]);
+
 	    returnString += "\tif( " + match + "){\n";
-	    returnString += "\t\t" + rule[1] + "();\n";
+	    returnString += "\t\t" + fullActionName + "( " + arguments + " );\n";
 	    returnString += "\t} else ";
 	    
 	}//End if table_add
 	else{
 	    if( rule[0] == "table_set_default" ){
-		defaultAction = rule[1];
+		//FIXME: deal with case where default action has parameters
+		defaultAction = rule[1] + "_" + networkMap->currentNodeName + "_" + std::to_string(actionIDs[rule[1]]);
 	    }
 
 	    //TODO: Model other commands
@@ -915,7 +986,8 @@ Visitor::profile_t CreateModel::init_apply(const IR::Node *root){
     if( commandsFile != "" ){
 	size_t beginPos, endPos, substrLen;
 
-	std::string commandName, tableName, actionName;
+	std::string commandName, tableName; 
+	std::string actionName, actionParameters;
 
 	std::vector<std::string> matchList;
 
@@ -932,7 +1004,7 @@ Visitor::profile_t CreateModel::init_apply(const IR::Node *root){
 
 		commandName = command.substr(0, beginPos);
 
-		//TODO: Extract other command types (e.g., table_set_default)
+		//TODO: Extract other command types (e.g., ?)
 		if( commandName == "table_add" ){
 		    //Get table name
 		    endPos = command.find(' ', beginPos+1);
@@ -950,13 +1022,25 @@ Visitor::profile_t CreateModel::init_apply(const IR::Node *root){
 		    endPos = command.find("=>", beginPos);
 		    substrLen = endPos - beginPos;
 		    matchString = command.substr(beginPos+1, substrLen-1);
+		    beginPos = endPos + 2;
 
+		    //Parse action parameters
+		    substrLen = command.length() - beginPos;
 
-		    //TODO: parse action parameters
+		    bool actionParamsParsed = false;
+
+		    if( substrLen > 0 ){
+		        actionParameters = command.substr(beginPos, substrLen);
+			actionParamsParsed = true;
+		    }
 
 		    parsedRule.push_back(commandName);
 		    parsedRule.push_back(actionName);
 		    parsedRule.push_back(matchString);
+
+		    if( actionParamsParsed ){
+		        parsedRule.push_back(actionParameters);
+		    }
 
 		    forwardingRules[tableName].push_back(parsedRule);
 		}
