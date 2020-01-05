@@ -105,6 +105,8 @@ class CompilerOptions : public Util::Options {
     cstring commandsFile = nullptr;
     cstring topoFile = nullptr;
     cstring archModel = nullptr;
+    cstring ingressNode = nullptr;
+    cstring ingressPort = nullptr;
     //P4BOX END
 
     // Expect that the only remaining argument is the input file.

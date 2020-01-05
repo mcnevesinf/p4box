@@ -209,6 +209,7 @@ std::string insertAssertionChecks( NetMap networkModelMap ){
 
     returnString += "void assert_error(char* msg){\n";
     returnString += "\tprintf(\"%s\\n\", msg);\n";
+    returnString += "\tklee_abort();\n";
     returnString += "}\n\n";
 
     returnString += "void end_assertions(){\n";
@@ -333,7 +334,7 @@ int main(int argc, char *const argv[]) {
 	    for( vp = boost::vertices(graph); vp.first != vp.second; ++vp.first ){
 		v = *vp.first;
 		//std::cout << "Node name: " << name[v] << std::endl;
-		if( name[v] == "a" ){
+		if( name[v] == options.ingressNode ){
 		    //std::cout << "Set start node" << std::endl;
 		    break;
 		}
@@ -402,7 +403,7 @@ int main(int argc, char *const argv[]) {
 	    //TODO: set start port
 	    netModel += "int main(){\n";
 	    netModel += "\tsymbolizeInputs();\n\n";
-	    netModel += "\t" + networkModelMap.stdMeta[name[v]] + ".ingress_port = 0;\n";
+	    netModel += "\t" + networkModelMap.stdMeta[name[v]] + ".ingress_port = " + options.ingressPort + ";\n";
 	    netModel += "\twalk_" + name[v] + "();\n";
 	    netModel += "\tend_assertions();\n";
 	    netModel += "\treturn 0;\n";
