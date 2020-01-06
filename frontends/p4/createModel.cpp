@@ -1256,22 +1256,31 @@ std::string CreateModel::assembleMonitors( std::string progBlock ){
     std::string assembleBefore = "";
     std::string assembleAfter = "";
 
+    unsigned lineNumber;
+    std::map<unsigned, std::string> orderedBeforeMonitors;
+    std::map<unsigned, std::string> orderedAfterMonitors;
+
     for( auto model : controlBlockMonitorModels ){
         if( model.monitoredBlock == progBlock ){
             //Assemble before and after monitors separately
             if( model.before == true ){
-                assembleBefore += model.monitorName + "_" + networkMap->currentNodeName; 
-                assembleBefore += "_before();\n\t";
+		lineNumber = P4boxIR->monitorDeclarations[model.monitorName].srcInfo.getStart().getLineNumber();
+		orderedBeforeMonitors[lineNumber] = model.monitorName + "_" + networkMap->currentNodeName + "_before();\n\t";
             }
             else{
-                assembleAfter += model.monitorName + "_" + networkMap->currentNodeName;
-                assembleAfter += "_after();\n\t";
+		lineNumber = P4boxIR->monitorDeclarations[model.monitorName].srcInfo.getStart().getLineNumber();
+		orderedAfterMonitors[lineNumber] = model.monitorName + "_" + networkMap->currentNodeName + "_after();\n\t";
             }
         }
     }
 
-    returnString += assembleBefore;
-    returnString += assembleAfter;
+    for( auto monitor : orderedBeforeMonitors ){
+	returnString += monitor.second;
+    }
+
+    for( auto monitor : orderedAfterMonitors ){
+	returnString += monitor.second;
+    }
 
     return returnString;
 }
