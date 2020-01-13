@@ -224,6 +224,17 @@ std::string insertAssertionChecks( NetMap networkModelMap ){
 }
 
 
+std::string insertRegisterInitializations( NetMap networkModelMap ){
+    std::string returnString = "";
+
+    returnString += "void initializeRegisters(){\n";
+    returnString += networkModelMap.registerInitializations;
+    returnString += "}\n\n";
+
+    return returnString;
+}
+
+
 int main(int argc, char *const argv[]) {
     setup_gc_logging();
 
@@ -376,6 +387,8 @@ int main(int argc, char *const argv[]) {
 	    std::map<std::string, std::string>::iterator metaIter;
 	    std::map<std::string, std::string>::iterator stdMetaIter;
 
+	    netModel += insertRegisterInitializations( networkModelMap );
+
 	    netModel += "void symbolizeInputs(){\n";
 
 	    if( networkModelMap.p4boxState != "" ){
@@ -402,6 +415,7 @@ int main(int argc, char *const argv[]) {
 	    //Model main function
 	    //TODO: set start port
 	    netModel += "int main(){\n";
+	    netModel += "\tinitializeRegisters();\n";
 	    netModel += "\tsymbolizeInputs();\n\n";
 	    netModel += "\t" + networkModelMap.stdMeta[name[v]] + ".ingress_port = " + options.ingressPort + ";\n";
 	    netModel += "\twalk_" + name[v] + "();\n";

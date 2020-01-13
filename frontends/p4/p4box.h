@@ -322,9 +322,11 @@ class CreateModel final : public Inspector {
     int nodeCounter;
     int tableCounter;
     int actionCounter;
+    int registerCounter;
     int assertionCounter;
     std::map<cstring, int> tableIDs;
     std::map<cstring, int> actionIDs;
+    std::map<cstring, int> registerIDs;
     std::map<cstring, int> typedefs;
     std::vector<std::string> nodeMetaVars;
  
@@ -369,9 +371,13 @@ class CreateModel final : public Inspector {
     std::string constantToC(const IR::Constant* intConst);
     std::string convertExactMatchValue(std::string value);
     std::string exprToC(const IR::Expression* expr);
+    std::string externMethodCall(std::string methodName, 
+				 const IR::MethodCallExpression* methodCall,
+				 bool* externMethod);
     std::string ifStatementToC(const IR::IfStatement* ifStatem );
     std::string insertAssertionChecks(void);
     std::string insertPreamble(void);
+    std::string instantiationToC(const IR::Declaration_Instance* inst);
     std::string lvalueToC(const IR::Expression* lvalue);
     std::string memberToC(const IR::Member* member);
     std::string methodCallExpressionToC(const IR::MethodCallExpression* methodCall);
@@ -400,6 +406,7 @@ class CreateModel final : public Inspector {
         nodeCounter = 1;
 	tableCounter = 1;
         actionCounter = 1;
+	registerCounter = 1;
 	assertionCounter = 1;
         mainFunctionModel = "";
         model = "";

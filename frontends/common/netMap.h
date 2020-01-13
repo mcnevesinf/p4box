@@ -12,6 +12,7 @@ class NetMap {
 	headersOn = false;
 
 	p4boxState = "";
+	registerInitializations = "";
 	globalDeclarations = "";
 	forwardDeclarations = "";
     }
@@ -27,6 +28,7 @@ class NetMap {
     std::string currentNodeName;
     std::string p4boxState;
     std::string headers;
+    std::string registerInitializations;
     std::string globalDeclarations;
     std::string forwardDeclarations;
     std::vector<std::string> logicalExpressionList;

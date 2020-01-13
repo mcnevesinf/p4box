@@ -87,8 +87,56 @@ std::string CreateModel::memberToC(const IR::Member* member){
 }
 
 
+std::string CreateModel::externMethodCall(std::string methodName, 
+					  const IR::MethodCallExpression* methodCall,
+					  bool* externMethod){
+    std::string returnString = "";
+
+    const IR::Member* member = methodCall->method->to<IR::Member>();
+
+    if( methodName == "write" ){
+	std::string registerName = member->expr->toString().c_str();
+
+	returnString += registerName + "_" + networkMap->currentNodeName + "_" 
+			+ std::to_string( registerIDs[registerName] );
+
+	const IR::Vector<IR::Expression>* args = methodCall->arguments;
+	std::vector<std::string> modeledArgs;
+
+	for( auto arg : *args ){
+	    modeledArgs.push_back( exprToC(arg) );
+	}
+
+	returnString += "[" + modeledArgs[0] + "] = " + modeledArgs[1] + ";";
+
+	*externMethod = true;
+    }
+    else{
+	if( methodName == "read" ){
+	    std::string registerName = member->expr->toString().c_str();
+
+	    const IR::Vector<IR::Expression>* args = methodCall->arguments;
+	    std::vector<std::string> modeledArgs;
+
+	    for( auto arg : *args ){
+	        modeledArgs.push_back( exprToC(arg) );
+	    }
+
+	    returnString += modeledArgs[0] + " = ";
+	    returnString += registerName + "_" + networkMap->currentNodeName + "_" + std::to_string( registerIDs[registerName] );
+	    returnString += "[" + modeledArgs[1] + "];"; 
+
+	    *externMethod = true;
+	}
+    }
+
+    return returnString;
+}
+
+
 std::string CreateModel::methodCallExpressionToC(const IR::MethodCallExpression* methodCall){
     std::string returnString = "";
+    bool externMethod = false;
 
     if( methodCall->method->is<IR::Member>() ){
         const IR::Member* member = methodCall->method->to<IR::Member>();
@@ -109,8 +157,13 @@ std::string CreateModel::methodCallExpressionToC(const IR::MethodCallExpression*
 		    returnString += ".isValid == 1";
 		}
 		else{
-                    returnString += memberToC(member);
-                    //std::cout << methodCall->method->toString() << std::endl;
+		    //Check inside externMethodCall function whether modelling an extern call
+		    returnString += externMethodCall( member->member.toString().c_str(), methodCall, &externMethod );		    
+
+		    if(!externMethod){
+                        returnString += memberToC(member);
+                        //std::cout << methodCall->method->toString() << std::endl;
+		    }
 		}//End if isValid
             }//End if setInvalid
         }//End if setValid
@@ -936,8 +989,15 @@ std::string CreateModel::p4TableToC(const IR::P4Table* table){
 	returnString += actionListWithRules(tableName, keyList);
     }
     else{
-	//If NOT manipulating forwarding rules
-	returnString += actionListNoRules( table->getActionList() );
+	//IF the current table is NOT manipulating forwarding rules
+	//THEN all tables must be symbolic
+	if( forwardingRules.size() > 0 ){
+	    std::cout << "ERROR: Match-action tables in a node must be all either symbolic or concrete." << std::endl;
+	    exit(1);
+	}
+	else{
+	    returnString += actionListNoRules( table->getActionList() );
+	}
     }
 
     returnString += "\n}\n\n";
@@ -1219,7 +1279,7 @@ Visitor::profile_t CreateModel::init_apply(const IR::Node *root){
                 }
             }
             else{
-                //Model local declarations (e.g., actions, tables)
+                //Model local declarations (e.g., actions, tables, registers)
                 const IR::MonitorLocal* localBlock = property->value->to<IR::MonitorLocal>();
 
                 for( auto localDeclaration : localBlock->monitorLocals ){
@@ -1239,6 +1299,11 @@ Visitor::profile_t CreateModel::init_apply(const IR::Node *root){
 			//TODO: remove debug code
                         //std::cout << locals.back() << std::endl;
                     }
+
+		    if( localDeclaration->is<IR::Declaration_Instance>() ){
+			std::cout << "Register instance" << std::endl;
+			locals.push_back( instantiationToC( localDeclaration->to<IR::Declaration_Instance>() ) );
+		    }
 
                 }//End for each local declaration
 
@@ -1419,6 +1484,57 @@ void CreateModel::postorder(const IR::Type_Typedef* tdef){
 
     std::string returnString = "typedef " + bitSizeToType( tdef->type->width_bits() ) + " " + nodeName + ";\n";
     modeledStructures.typedefs.push_back( returnString );
+}
+
+
+std::string CreateModel::instantiationToC(const IR::Declaration_Instance* inst){
+    std::string returnString = "";
+
+    //TODO: model other instantiation types (e.g., Type_Name)
+    if(inst->type->is<IR::Type_Specialized>()){
+
+	const IR::Type_Specialized* instType = inst->type->to<IR::Type_Specialized>();
+	std::string baseType = instType->baseType->toString().c_str();
+
+	if( baseType == "register" ){
+
+	    //Get size of register array
+	    const IR::Vector<IR::Expression>* args = inst->arguments;
+	    const IR::Constant* regSize;
+
+	    for( auto arg : *args ){
+		if( arg->is<IR::Constant>() ){
+		    regSize = arg->to<IR::Constant>();
+		    break;
+		}
+	    }
+
+	    //Get register width
+	    int registerWidth = 0;
+
+	    for( auto typeArg : *instType->arguments ){
+		if( typeArg->is<IR::Type_Bits>() ){
+		    const IR::Type_Bits* widthType = typeArg->to<IR::Type_Bits>();
+
+		    registerWidth = widthType->width_bits();
+		}
+	    }
+
+	    registerIDs[inst->Name()] = registerCounter;
+    	    registerCounter++;
+
+	    returnString += bitSizeToType( registerWidth ) + "* " + inst->Name() + "_" + networkMap->currentNodeName 
+				+ "_" + std::to_string( registerIDs[inst->Name()] ) + ";\n\n";
+
+	    networkMap->registerInitializations += "\t" + inst->Name() + "_" + networkMap->currentNodeName 
+				+ "_" + std::to_string( registerIDs[inst->Name()] ) + " = v1model_declare_register(" + 
+				std::to_string(registerWidth) + ", " + constantToC(regSize) + ");\n";
+
+	}//End register instantiation
+
+    }//End if Type_Specialized
+
+    return returnString;
 }
 
 
