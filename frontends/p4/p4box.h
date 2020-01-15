@@ -371,6 +371,7 @@ class CreateModel final : public Inspector {
     std::string blockStatementToC(const IR::BlockStatement* body);
     std::string constantToC(const IR::Constant* intConst);
     std::string convertExactMatchValue(std::string value);
+    std::string equToC( const IR::Equ* equExpr );
     std::string exprToC(const IR::Expression* expr);
     std::string externMethodCall(std::string methodName, 
 				 const IR::MethodCallExpression* methodCall,
@@ -379,9 +380,12 @@ class CreateModel final : public Inspector {
     std::string insertAssertionChecks(void);
     std::string insertPreamble(void);
     std::string instantiationToC(const IR::Declaration_Instance* inst);
+    std::string landToC( const IR::LAnd* landExpr );
+    std::string lorToC( const IR::LOr* lorExpr );
     std::string lvalueToC(const IR::Expression* lvalue);
     std::string memberToC(const IR::Member* member);
     std::string methodCallExpressionToC(const IR::MethodCallExpression* methodCall);
+    std::string neqToC( const IR::Neq* neqExpr );
     std::string p4ActionToC(const IR::P4Action* action);
     std::string p4ParserToC(const IR::P4Parser* parser);
     std::string p4TableToC(const IR::P4Table* table);

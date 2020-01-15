@@ -255,6 +255,42 @@ std::string CreateModel::subToC(const IR::Sub* subExpr){
 }
 
 
+std::string CreateModel::equToC( const IR::Equ* equExpr ){
+    std::string returnString = "";
+
+    returnString += exprToC( equExpr->left ) + " == " + exprToC( equExpr->right );
+
+    return returnString;
+}
+
+
+std::string CreateModel::neqToC( const IR::Neq* neqExpr ){
+    std::string returnString = "";
+
+    returnString += exprToC( neqExpr->left ) + " != " + exprToC( neqExpr->right );
+
+    return returnString;
+}
+
+
+std::string CreateModel::lorToC( const IR::LOr* lorExpr ){
+    std::string returnString = "";
+
+    returnString += exprToC( lorExpr->left ) + " || " + exprToC( lorExpr->right );
+
+    return returnString;
+}
+
+
+std::string CreateModel::landToC( const IR::LAnd* landExpr ){
+    std::string returnString = "";
+
+    returnString += exprToC( landExpr->left ) + " && " + exprToC( landExpr->right );
+
+    return returnString;
+}
+
+
 std::string CreateModel::exprToC(const IR::Expression* expr){
     std::string returnString = "";
 
@@ -290,8 +326,27 @@ std::string CreateModel::exprToC(const IR::Expression* expr){
 			    if( expr->is<IR::Sub>() ){
 				const IR::Sub* subExpr = expr->to<IR::Sub>();
 				returnString += subToC( subExpr );
+			    } else
+			    if( expr->is<IR::Equ>() ){
+				const IR::Equ* equExpr = expr->to<IR::Equ>();
+				returnString += equToC( equExpr );
+			    } else
+			    if( expr->is<IR::Neq>() ){
+				const IR::Neq* neqExpr = expr->to<IR::Neq>();
+				returnString += neqToC( neqExpr );
+			    } else
+			    if( expr->is<IR::LOr>() ){
+				const IR::LOr* lorExpr = expr->to<IR::LOr>();
+				returnString += lorToC( lorExpr );
+			    }  else
+			    if( expr->is<IR::LAnd>() ){
+				const IR::LAnd* landExpr = expr->to<IR::LAnd>();
+				returnString += landToC( landExpr );
 			    }
-		            //TODO: Model other types of expressions
+			    else{
+		                //TODO: Model other types of expressions
+				std::cout << "ERROR: Using not modeled expression.\n" << std::endl;
+			    }
 			}//End if Method call
 		    }//End if Member
 		}//End if PathExpression
@@ -368,6 +423,7 @@ std::string CreateModel::ifStatementToC( const IR::IfStatement* ifStatem ){
     }
     else{
 	std::cout << "ERROR: Only block statements can be modeled inside conditional statements. Maybe you want to use brackets." << std::endl;
+	exit(1);
     }
 
     returnString += "}\n\t";
@@ -382,6 +438,7 @@ std::string CreateModel::ifStatementToC( const IR::IfStatement* ifStatem ){
         }
         else{
 	    std::cout << "ERROR: Only block statements can be modeled inside conditional statements. Maybe you want to use brackets." << std::endl;
+	    exit(1);
         }
 
 	returnString += "}\n\t";
@@ -619,7 +676,19 @@ std::string CreateModel::blockStatementToC(const IR::BlockStatement* body){
                 const IR::AssignmentStatement* assignStatem = component->to<IR::AssignmentStatement>();
                 returnString += assignmentStatemToC(assignStatem) + "\n\t";
             }
-	    //TODO: continue here. Process assertion.
+	    else{
+		if( component->is<IR::IfStatement>() ){
+		    const IR::IfStatement* ifStatem = component->to<IR::IfStatement>();
+		    returnString += ifStatementToC( ifStatem ) + "\n\t";
+		}
+		else{
+		    if( component->is<IR::BlockStatement>() ){
+		        const IR::BlockStatement* blockStatem = component->to<IR::BlockStatement>();
+		        returnString += blockStatementToC( blockStatem ) + "\n\t";
+		    }
+		    //TODO: continue here. Process assertion.
+		}//End IF conditional statement
+	    }//End IF assignment statement
         }//End IF MethodCallStatement
 
     }//End for each component
