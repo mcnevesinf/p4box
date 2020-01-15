@@ -327,6 +327,7 @@ class CreateModel final : public Inspector {
     std::map<cstring, int> tableIDs;
     std::map<cstring, int> actionIDs;
     std::map<cstring, int> registerIDs;
+    std::map<cstring, int> registerSize;
     std::map<cstring, int> typedefs;
     std::vector<std::string> nodeMetaVars;
  

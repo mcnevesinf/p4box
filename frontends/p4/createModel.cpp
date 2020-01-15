@@ -97,15 +97,21 @@ std::string CreateModel::externMethodCall(std::string methodName,
     if( methodName == "write" ){
 	std::string registerName = member->expr->toString().c_str();
 
-	returnString += registerName + "_" + networkMap->currentNodeName + "_" 
-			+ std::to_string( registerIDs[registerName] );
-
 	const IR::Vector<IR::Expression>* args = methodCall->arguments;
 	std::vector<std::string> modeledArgs;
 
 	for( auto arg : *args ){
 	    modeledArgs.push_back( exprToC(arg) );
 	}
+
+	//Add guards to symbolic indexes
+	returnString += "klee_assume( " + modeledArgs[0] + " >= 0 );\n\t";
+	returnString += "klee_assume( " + modeledArgs[0] + " < " + std::to_string( registerSize[registerName] ) + " );\n\t";
+
+	returnString += registerName + "_" + networkMap->currentNodeName + "_" 
+			+ std::to_string( registerIDs[registerName] );
+
+	
 
 	returnString += "[" + modeledArgs[0] + "] = " + modeledArgs[1] + ";";
 
@@ -121,6 +127,10 @@ std::string CreateModel::externMethodCall(std::string methodName,
 	    for( auto arg : *args ){
 	        modeledArgs.push_back( exprToC(arg) );
 	    }
+
+	    //Add guards to symbolic indexes
+	    returnString += "klee_assume( " + modeledArgs[1] + " >= 0 );\n\t";
+	    returnString += "klee_assume( " + modeledArgs[1] + " < " + std::to_string( registerSize[registerName] ) + " );\n\t";
 
 	    returnString += modeledArgs[0] + " = ";
 	    returnString += registerName + "_" + networkMap->currentNodeName + "_" + std::to_string( registerIDs[registerName] );
@@ -1301,7 +1311,6 @@ Visitor::profile_t CreateModel::init_apply(const IR::Node *root){
                     }
 
 		    if( localDeclaration->is<IR::Declaration_Instance>() ){
-			std::cout << "Register instance" << std::endl;
 			locals.push_back( instantiationToC( localDeclaration->to<IR::Declaration_Instance>() ) );
 		    }
 
@@ -1508,6 +1517,8 @@ std::string CreateModel::instantiationToC(const IR::Declaration_Instance* inst){
 		    break;
 		}
 	    }
+
+	    registerSize[inst->Name()] = std::stoi( constantToC(regSize) );
 
 	    //Get register width
 	    int registerWidth = 0;
