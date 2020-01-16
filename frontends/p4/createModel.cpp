@@ -144,9 +144,28 @@ std::string CreateModel::externMethodCall(std::string methodName,
 }
 
 
+std::string CreateModel::externFunctionCall( std::string functionName, 
+					     const IR::MethodCallExpression* methodCall,
+					     bool* externFunction ){
+    std::string returnString = "";
+
+    if( functionName == "hash" ){
+        std::cout << "hash function found" << std::endl;
+	*externFunction = true;
+    } else
+    if( functionName == "mark_to_drop" ){
+        returnString += "mark_to_drop();\n";
+        *externFunction = true;
+    }
+
+    return returnString;
+}
+
+
 std::string CreateModel::methodCallExpressionToC(const IR::MethodCallExpression* methodCall){
     std::string returnString = "";
     bool externMethod = false;
+    bool externFunction = false;
 
     if( methodCall->method->is<IR::Member>() ){
         const IR::Member* member = methodCall->method->to<IR::Member>();
@@ -182,8 +201,26 @@ std::string CreateModel::methodCallExpressionToC(const IR::MethodCallExpression*
 	if( methodCall->method->is<IR::PathExpression>() ){
 	    const IR::PathExpression* pathExpr = methodCall->method->to<IR::PathExpression>();
 
-	    returnString += pathExpr->toString() + "();\n";
-	    
+	    returnString += externFunctionCall( pathExpr->toString().c_str(), methodCall, &externFunction );
+
+            if(!externFunction){
+                //TODO: check whether only actions activate this branch
+                returnString += pathExpr->toString() + "_" + networkMap->currentNodeName + "_" + 
+                                std::to_string( actionIDs[pathExpr->toString().c_str()] ) + "( ";
+
+                const IR::Vector<IR::Expression>* args = methodCall->arguments;
+                std::string modeledArgs = "";
+
+	        for( auto arg : *args ){
+	            modeledArgs += exprToC(arg) + ", ";
+	        }
+                //remove last comma
+                modeledArgs = modeledArgs.substr(0, modeledArgs.size()-2);
+                returnString += modeledArgs;
+
+                returnString += " );\n";
+            }	    
+
 	    //std::cout << "Method call: " << pathExpr->toString() << std::endl;
 	}
     }

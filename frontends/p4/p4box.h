@@ -373,6 +373,9 @@ class CreateModel final : public Inspector {
     std::string convertExactMatchValue(std::string value);
     std::string equToC( const IR::Equ* equExpr );
     std::string exprToC(const IR::Expression* expr);
+    std::string externFunctionCall( std::string functionName, 
+			 	    const IR::MethodCallExpression* methodCall,
+				    bool* externFunction );
     std::string externMethodCall(std::string methodName, 
 				 const IR::MethodCallExpression* methodCall,
 				 bool* externMethod);
