@@ -966,6 +966,7 @@ std::string CreateModel::actionListWithRules(cstring tableName, const IR::Key* k
     std::string defaultAction;
 
     for(auto rule : forwardingRules[tableName]){
+
 	//Model table entry
 	if( rule[0] == "table_add" ){
 	    tableAdd = true;
@@ -1062,6 +1063,13 @@ std::string CreateModel::actionListWithRules(cstring tableName, const IR::Key* k
 
 	    //TODO: Model other commands
 	}
+
+        //Clear rule components
+        match = "";
+        arguments = "";
+        matchValues.clear();
+        actionParameters.clear();
+
 
     }//End for each forwarding rule
 
