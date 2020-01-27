@@ -65,12 +65,27 @@ std::string CreateModel::memberToC(const IR::Member* member){
     //TODO: remove debug code
     //std::cout << "Member: " << member->member.toString() << std::endl;
     //std::cout << "Member expr: " << member->expr->toString().c_str() << "\n<<\n";
+    std::string memberExpr = member->expr->toString().c_str();
 
     if( member->member.toString() != "apply" ){
         //TODO: Model "last"
-        //std::cout << "lvalue: " << lvalueToC(member->expr) << std::endl; 
-        returnString += lvalueToC(member->expr) + "." + member->member.toString();
 
+        //Model hit method
+        if( member->member.toString() == "hit" and memberExpr.length() > 5 ){
+            if( memberExpr.substr( memberExpr.length()-5 ) == "apply" ){
+                std::size_t nameDelim = memberExpr.find(".");
+                std::string tableName = memberExpr.substr(0, nameDelim);
+                //std::cout << "Hit table name: " << tableName << std::endl;
+                returnString += tableName + "_" + networkMap->currentNodeName + "_" + std::to_string( tableIDs[tableName] ) + "_hit == 1";
+            }
+        }
+        else{
+
+            //std::cout << "lvalue: " << lvalueToC(member->expr) << std::endl; 
+            //std::cout << "Member: " << member->member.toString() << std::endl;
+            returnString += lvalueToC(member->expr) + "." + member->member.toString();
+
+        }
     }
     else{
         //Apply method
@@ -150,12 +165,26 @@ std::string CreateModel::externFunctionCall( std::string functionName,
     std::string returnString = "";
 
     if( functionName == "hash" ){
-        std::cout << "hash function found" << std::endl;
+
+        const IR::Vector<IR::Expression>* arguments = methodCall->arguments;
+        std::string hashOutput = exprToC( arguments->front() );
+
+        returnString += "klee_make_symbolic(&" + hashOutput + ", sizeof(" + hashOutput + "), \"" + hashOutput + "_" + std::to_string(hashCounter) + "\");\n\t";
+        hashCounter++;
 	*externFunction = true;
+
     } else
     if( functionName == "mark_to_drop" ){
+
         returnString += "mark_to_drop();\n";
         *externFunction = true;
+
+    } else
+    if( functionName == "NoAction" ){
+
+        returnString += "NoAction();\n";
+        *externFunction = true;
+
     }
 
     return returnString;
@@ -186,13 +215,14 @@ std::string CreateModel::methodCallExpressionToC(const IR::MethodCallExpression*
 		    returnString += ".isValid == 1";
 		}
 		else{
-		    //Check inside externMethodCall function whether modelling an extern call
-		    returnString += externMethodCall( member->member.toString().c_str(), methodCall, &externMethod );		    
+		        //Check inside externMethodCall function whether modelling an extern call
+		        returnString += externMethodCall( member->member.toString().c_str(), methodCall, &externMethod );		    
 
-		    if(!externMethod){
-                        returnString += memberToC(member);
-                        //std::cout << methodCall->method->toString() << std::endl;
-		    }
+		        if(!externMethod){
+                            returnString += memberToC(member);
+                            //std::cout << methodCall->method->toString() << std::endl;
+		        }
+
 		}//End if isValid
             }//End if setInvalid
         }//End if setValid
@@ -446,13 +476,67 @@ std::string CreateModel::assignmentStatemToC(const IR::AssignmentStatement* assi
 }
 
 
+std::string CreateModel::stringReverse( std::string str ){
+    std::string revString = "";
+
+    for(int i = str.length()-1; i>=0; i--){
+        revString += str[i];
+    }
+
+    return revString;
+}
+
+
+std::vector<std::string> CreateModel::splitString( std::string str ){
+    std::vector<std::string> splitStr;
+
+    size_t found = 0;
+    size_t delim;
+
+    do{
+        delim = str.find(" ", found);
+
+        if( delim != std::string::npos ){
+            splitStr.push_back( str.substr(found, delim-found) );
+            found = delim+1;
+        }
+        else{
+            found = delim;
+        }
+    }
+    while(found != std::string::npos);
+
+    return splitStr;
+}
+
+
 
 std::string CreateModel::ifStatementToC( const IR::IfStatement* ifStatem ){
     std::string returnString = "";
 
     const IR::BlockStatement* block;
 
-    returnString += "if( " + exprToC( ifStatem->condition ) + " ){\n\t\t";
+    //Check whether condition involves applying a match-action table
+    std::string condition = exprToC( ifStatem->condition );
+    //std::cout << "Condition: " << condition << std::endl;
+
+    std::vector<std::string> splitCond = splitString( condition );
+    size_t hitFound = 0;
+
+    for( auto part : splitCond ){
+        //std::cout << "Part: " << part << std::endl;
+        hitFound = part.find("_hit");
+        if( hitFound != std::string::npos and (hitFound + 4 == part.length())){
+            //std::cout << "Table call found" << std::endl;
+            part.replace(hitFound, 4, "");
+            //std::cout << "New part: " << part << std::endl;
+            returnString += part + "();\n\t";
+        }
+
+        //TODO: model other flags (e.g., miss, action_run, etc)
+    }
+
+    returnString += "if( " + condition + " ){\n\t\t";
 
     if( ifStatem->ifTrue->is<IR::BlockStatement>() ){
 	block = ifStatem->ifTrue->to<IR::BlockStatement>();
@@ -1052,6 +1136,7 @@ std::string CreateModel::actionListWithRules(cstring tableName, const IR::Key* k
 
 	    returnString += "\tif( " + match + "){\n";
 	    returnString += "\t\t" + fullActionName + "( " + arguments + " );\n";
+            returnString += "\t\t" + tableName + "_" + networkMap->currentNodeName + "_" + std::to_string(tableIDs[tableName]) + "_hit = 1;\n";
 	    returnString += "\t} else ";
 	    
 	}//End if table_add
@@ -1075,10 +1160,12 @@ std::string CreateModel::actionListWithRules(cstring tableName, const IR::Key* k
 
     //Model call for default action.
     if(tableAdd){
-	returnString += "{\n\t\t" + defaultAction + "(); //Default action\n\t}";
+	returnString += "{\n\t\t" + defaultAction + "(); //Default action\n";
+        returnString += "\t\t" + tableName + "_" + networkMap->currentNodeName + "_" + std::to_string(tableIDs[tableName]) + "_hit = 0;\n\t}";
     }
     else{
-        returnString += "\t" + defaultAction + "(); //Default action";
+        returnString += "\t" + defaultAction + "(); //Default action\n";
+        returnString += "\t" + tableName + "_" + networkMap->currentNodeName + "_" + std::to_string(tableIDs[tableName]) + "_hit = 0;\n";
     }
 
     return returnString;
@@ -1093,6 +1180,10 @@ std::string CreateModel::p4TableToC(const IR::P4Table* table){
     tableCounter++;
 
     returnString += "//Table\n";
+
+    //Model hit/miss state
+    returnString += "int " + tableName + "_" + networkMap->currentNodeName + "_" + std::to_string( tableIDs[tableName] ) + "_hit;\n\n";
+
     returnString += "void " + tableName + "_" + networkMap->currentNodeName + "_" + std::to_string( tableIDs[tableName] ) + "(){\n";
 
     std::map<cstring, std::vector<std::vector<std::string>>>::iterator it;
@@ -1151,6 +1242,31 @@ std::string CreateModel::protectedStructToC(const IR::Type_ProtectedStruct* pstr
     }
 
     returnString += "} " + pstruct->name + ";\n";
+
+    return returnString;
+}
+
+
+std::string CreateModel::variableToC( const IR::Declaration_Variable* var ){
+    std::string returnString = "";
+
+    //std::cout << "Variable found" << std::endl;
+    
+    //TODO: model other variable types
+    if( var->type->is<IR::Type_Bits>() ){
+        //std::cout << "Var type bits" << std::endl;
+        const IR::Type_Bits* varType = var->type->to<IR::Type_Bits>();
+        returnString += bitSizeToType( varType->size );
+    }
+
+    returnString += " " + var->name.toString();  
+
+    if( var->initializer != nullptr ){
+        //TODO: model variable initializer
+    }
+    else{ 
+        returnString += ";\n\n";
+    }
 
     return returnString;
 }
@@ -1426,6 +1542,11 @@ Visitor::profile_t CreateModel::init_apply(const IR::Node *root){
 
 		    if( localDeclaration->is<IR::Declaration_Instance>() ){
 			locals.push_back( instantiationToC( localDeclaration->to<IR::Declaration_Instance>() ) );
+		    }
+
+                    //Variable declarations
+                    if( localDeclaration->is<IR::Declaration_Variable>() ){
+			locals.push_back( variableToC( localDeclaration->to<IR::Declaration_Variable>() ) );
 		    }
 
                 }//End for each local declaration
