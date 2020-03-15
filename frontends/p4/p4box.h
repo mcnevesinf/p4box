@@ -352,7 +352,7 @@ class CreateModel final : public Inspector {
     //std::vector<std::string> monitorCalls;
 
     //Need to keep: 	1) monitor name; 2) monitored block; 3) before/after; 
-    // 			4) qualifier (e.g., parser state, extern type); 5) C model
+    // 			4) qualifier (e.g., pasrser state, extern type); 5) C model
     std::vector<MonitorModel> controlBlockMonitorModels;
     std::vector<MonitorModel> parserMonitorModels;
     std::vector<std::string> locals;
@@ -364,6 +364,7 @@ class CreateModel final : public Inspector {
 
     std::string actionListNoRules(const IR::ActionList* actionList);
     std::string actionListWithRules(cstring tableName, const IR::Key* keyList);
+    std::string actionListWithRulesOptimized(cstring tableName, const IR::Key* keyList);
     std::string addToC(const IR::Add* addExpr);
     std::pair<std::string, std::string> assertionToC(std::string assertString);
     std::string assign(const IR::AssignmentStatement* assignStatem);

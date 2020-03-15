@@ -411,7 +411,7 @@ int main(int argc, char *const argv[]) {
 
 	    //Model assertion checks
 	    netModel += insertAssertionChecks( networkModelMap ) + "\n";
-
+	    
 	    //Model main function
 	    //TODO: set start port
 	    netModel += "int main(){\n";

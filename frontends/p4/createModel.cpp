@@ -1035,6 +1035,174 @@ std::string CreateModel::convertExactMatchValue(std::string value){
 }
 
 
+std::string CreateModel::actionListWithRulesOptimized(cstring tableName, const IR::Key* keyList){
+    std::string returnString = "";
+
+    //Map containing action indexed rules
+    //Key : (action name, action parameters) - string format
+    //Value : match from rules invoking action key
+    std::map< std::pair<std::string, std::string>, std::vector<std::string> > actionIndexedRules;
+
+    std::string match = "";
+    std::string keyName = "";
+    std::string matchType = "";
+    std::string arguments = "";
+    std::string fullActionName = "";
+
+    std::vector<std::string> matchValues;
+    std::vector<std::string> actionParameters;
+
+    bool tableAdd = false;
+    std::string defaultAction;
+
+    //Create action indexed rules
+    for(auto rule : forwardingRules[tableName]){
+        
+        if( rule[0] == "table_add" ){
+            tableAdd = true;
+	    
+	    //Extract matching values from forwarding rule
+	    size_t matchBegin = 0;
+	    size_t matchEnd = rule[2].find(' ', 0);
+	    size_t substrLen;
+	    std::string matchValue;
+
+	    while( matchEnd != std::string::npos ){
+		substrLen = matchEnd - matchBegin;
+		matchValue = rule[2].substr(matchBegin, substrLen);
+		matchValues.push_back(matchValue);
+
+		matchBegin = matchEnd+1;
+		matchEnd = rule[2].find(' ', matchBegin);
+	    }
+
+	    //Model rule match
+	    int i=0, j=0;
+	    size_t pos;
+
+	    for( auto key : keyList->keyElements ){
+		keyName = key->expression->toString();
+
+		//Set match names specific to a device (i.e., metadata)
+		for( j=0; j < nodeMetaVars.size(); j++ ){
+		    pos = keyName.find( nodeMetaVars[j]+"." );
+
+		    if( pos != std::string::npos ){
+		        keyName.replace(pos, nodeMetaVars[j].length(), nodeMetaVars[j] + "_" + networkMap->currentNodeName);
+	    		break;
+		    }
+    		}
+
+		matchType = key->matchType->toString();
+
+		if(matchType == "exact"){
+		    match += keyName + " == " + convertExactMatchValue(matchValues[i]) + " && ";
+		}
+		else{
+		    //TODO: Model other match types (ternary, lpm, etc) as well as rule priorities
+		}
+
+		i++;
+
+	    }//End for each matching key
+
+	    //Remove last connector
+	    match = match.substr(0, match.length()-4);
+
+	    //Model action arguments
+	    
+	    //Extract arguments from forwarding rule
+	    if( rule.size() > 3 ){
+		size_t argBegin = 1;
+		size_t argEnd = rule[3].find(' ', argBegin);
+		size_t argLen;
+		std::string argValue;
+
+		while( argEnd != std::string::npos ){
+		    argLen = argEnd - argBegin;
+		    argValue = rule[3].substr(argBegin, argLen);
+		    actionParameters.push_back(argValue);
+
+		    argBegin = argEnd+1;
+		    argEnd = rule[3].find(' ', argBegin);
+	        }
+
+		argLen = argEnd - argBegin;
+		argValue = rule[3].substr(argBegin, argLen);
+		actionParameters.push_back(argValue);
+
+	    }
+	    
+	    for( auto param : actionParameters ){
+		arguments += convertExactMatchValue(param) + ", ";
+	    }
+
+	    arguments = arguments.substr(0, arguments.length()-2);
+
+	    fullActionName = rule[1] + "_" + networkMap->currentNodeName + "_" + std::to_string(actionIDs[rule[1]]);
+
+            std::pair<std::string, std::string> actionIndexedKey;
+            actionIndexedKey.first = fullActionName;
+            actionIndexedKey.second = arguments;
+	    actionIndexedRules[actionIndexedKey].push_back(match);
+	    
+	}//End if table_add
+        else{
+	    if( rule[0] == "table_set_default" ){
+		//FIXME: deal with case where default action has parameters
+		defaultAction = rule[1] + "_" + networkMap->currentNodeName + "_" + std::to_string(actionIDs[rule[1]]);
+	    }
+
+	    //TODO: Model other commands
+	}
+
+        //Clear rule components
+        match = "";
+        arguments = "";
+        matchValues.clear();
+        actionParameters.clear();
+
+    }//End creation of action indexed rules
+
+    if(tableAdd){
+        std::map< std::pair<std::string, std::string>, std::vector<std::string> >::iterator it = actionIndexedRules.begin();
+ 
+        // Iterate over the map using Iterator till end.
+        std::string combinedMatch = "";
+
+        while (it != actionIndexedRules.end()){
+            fullActionName = it->first.first;
+            arguments = it->first.second;
+            combinedMatch = "";
+
+            for(auto match : actionIndexedRules[it->first]){
+                combinedMatch += match + " ||\n\t";
+            }
+
+            //Remove last connector
+            combinedMatch = combinedMatch.substr(0, combinedMatch.length()-5);
+
+            //TODO: continue here. organize match
+	    returnString += "\tif( " + combinedMatch + " ){\n";
+	    returnString += "\t\t" + fullActionName + "( " + arguments + " );\n";
+            returnString += "\t\t" + tableName + "_" + networkMap->currentNodeName + "_" + std::to_string(tableIDs[tableName]) + "_hit = 1;\n";
+	    returnString += "\t} else ";
+
+            it++;
+        }
+
+	returnString += "{\n\t\t" + defaultAction + "(); //Default action\n";
+        returnString += "\t\t" + tableName + "_" + networkMap->currentNodeName + "_" + std::to_string(tableIDs[tableName]) + "_hit = 0;\n\t}";
+    }
+    else{
+        returnString += "\t" + defaultAction + "(); //Default action\n";
+        returnString += "\t" + tableName + "_" + networkMap->currentNodeName + "_" + std::to_string(tableIDs[tableName]) + "_hit = 0;\n";
+    }
+
+    return returnString;
+}
+
+
 std::string CreateModel::actionListWithRules(cstring tableName, const IR::Key* keyList){
     std::string returnString = "";
 
@@ -1100,6 +1268,7 @@ std::string CreateModel::actionListWithRules(cstring tableName, const IR::Key* k
 
 	    }//End for each matching key
 
+	    //Remove last connector
 	    match = match.substr(0, match.length()-4);
 
 	    //Model action arguments
@@ -1201,7 +1370,7 @@ std::string CreateModel::p4TableToC(const IR::P4Table* table){
 	    }
 	}
 
-	returnString += actionListWithRules(tableName, keyList);
+	returnString += actionListWithRulesOptimized(tableName, keyList);
     }
     else{
 	//IF the current table is NOT manipulating forwarding rules
