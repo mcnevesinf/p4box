@@ -40,6 +40,8 @@ limitations under the License.
 #include "/usr/include/boost/graph/breadth_first_search.hpp"
 #include "/usr/include/boost/version.hpp"
 
+#include <sys/stat.h>
+
 
 using namespace boost;
 
@@ -366,19 +368,47 @@ int main(int argc, char *const argv[]) {
 
 	    netModel += "\n";
 
+	    //Create and call libraries containing node models
+            if( mkdir("nodeModels", S_IRUSR | S_IWUSR | S_IXUSR) != -1 ){
+                std::cout << "Directory created" << std::endl;
+
+	        std::string hFileName = "nodeModels/headers.h";
+	    	std::ofstream hFile;
+	    	hFile.open(hFileName);
+	    	hFile << networkModelMap.headersInclude;
+	    	hFile.close();
+
+   	        std::map<std::string, std::string>::iterator nodeIter;
+
+	        for (nodeIter = networkModelMap.nodeModels.begin(); nodeIter != networkModelMap.nodeModels.end(); ++nodeIter){
+		    std::string nodeFileName = "nodeModels/node_" + nodeIter->first + ".c";
+    	            std::ofstream nodeFile;
+    	            nodeFile.open(nodeFileName);
+    	            nodeFile << nodeIter->second;
+    	            nodeFile.close();
+
+		    //netModel += nodeIter->second + "\n"; 
+	        }
+
+		for(nodeIter = networkModelMap.nodeIncludeModels.begin(); nodeIter != networkModelMap.nodeIncludeModels.end(); ++nodeIter){
+		    std::string nodeIncludeFileName = "nodeModels/node_" + nodeIter->first + ".h";
+    	            std::ofstream nodeIncludeFile;
+    	            nodeIncludeFile.open(nodeIncludeFileName);
+    	            nodeIncludeFile << nodeIter->second;
+    	            nodeIncludeFile.close();
+		}
+	        //netModel += "\n";                
+            }
+            else{
+                //TODO: exit properly (i.e., informing the user)
+                exit(1);
+            }
+
 	    //Insert assertion variables
 	    netModel += networkModelMap.globalDeclarations + "\n";
 
 	    //Forward declare walk functions
 	    netModel += networkModelMap.forwardDeclarations + "\n";
-
-	    //Insert node models
-	    std::map<std::string, std::string>::iterator nodeIter;
-
-	    for (nodeIter = networkModelMap.nodeModels.begin(); nodeIter != networkModelMap.nodeModels.end(); ++nodeIter){
-		netModel += nodeIter->second + "\n"; 
-	    }
-	    netModel += "\n";
 
 	    custom_bfs_visitor vis(graph, &netModel, networkModelMap);
 	    boost::breadth_first_search( graph, v, boost::visitor(vis) );

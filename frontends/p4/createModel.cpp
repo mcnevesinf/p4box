@@ -1881,7 +1881,9 @@ void CreateModel::postorder(const IR::Type_Struct* tstruct){
     if(tstruct->name == "headers" || tstruct->name == "p4boxState" || tstruct->name == "standard_metadata_t"){
 	if(!networkMap->headersOn){
 	    returnString += "} " + tstruct->name + ";\n";
-    	    modeledStructures.structs.push_back( returnString );
+	    networkMap->netwideStructs += returnString + "\n";
+            
+    	    //modeledStructures.structs.push_back( returnString );
 	}
     }
     else{
@@ -2035,14 +2037,16 @@ void CreateModel::end_apply(const IR::Node* node){
     if(!networkMap->headersOn){
 
         for( auto tdef : modeledStructures.typedefs ){
-	    model += tdef;
-    	    model += "\n";
+	    networkMap->headersInclude += tdef;
+    	    networkMap->headersInclude += "\n";
         }
 
         for( auto headerModel : modeledStructures.headers ){
-            model += headerModel;
-	    model += "\n";
+            networkMap->headersInclude += headerModel;
+	    networkMap->headersInclude += "\n";
          }
+
+	networkMap->headersInclude += networkMap->netwideStructs;
 
         //Model protected state
         for( auto pstruct : P4boxIR->pStructMap ){
@@ -2051,8 +2055,8 @@ void CreateModel::end_apply(const IR::Node* node){
     }
 
     for( auto structModel : modeledStructures.structs ){
-	model += structModel;
-	model += "\n";
+	includeModel += structModel;
+	includeModel += "\n";
     }
 
     model += inputDeclaration;
@@ -2075,6 +2079,7 @@ void CreateModel::end_apply(const IR::Node* node){
     model += mainFunctionModel;
     
     networkMap->nodeModels[networkMap->currentNodeName] = model;
+    networkMap->nodeIncludeModels[networkMap->currentNodeName] = includeModel;
     networkMap->headersOn = true;
 }
 

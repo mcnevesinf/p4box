@@ -10,6 +10,8 @@ class NetMap {
     NetMap(){
 	deviceId = 1;
 	headersOn = false;
+	headersInclude = "";
+	std::string netwideStructs = "";
 
 	p4boxState = "";
 	registerInitializations = "";
@@ -19,8 +21,11 @@ class NetMap {
 
     int deviceId;
     bool headersOn;
+    std::string headersInclude;
+    std::string netwideStructs;
 
     std::vector<std::string> archTypes;
+    std::map<std::string, std::string> nodeIncludeModels;
     std::map<std::string, std::string> nodeModels;
     std::map<std::string, std::string> stdMeta;
     std::map<std::string, std::string> metaName;

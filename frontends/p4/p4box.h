@@ -341,6 +341,7 @@ class CreateModel final : public Inspector {
     cstring commandsFile;
     cstring archType;
     std::string model;
+    std::string includeModel;
     std::string mainFunctionModel;
     std::string inputDeclaration;
     std::string inputSymbolization;
@@ -424,6 +425,7 @@ class CreateModel final : public Inspector {
         hashCounter = 1;
         mainFunctionModel = "";
         model = "";
+	includeModel = "";
 	inputDeclaration = "";
 	inputSymbolization = "void symbolizeInputs(){\n";
 
