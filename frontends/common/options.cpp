@@ -183,11 +183,20 @@ CompilerOptions::CompilerOptions() : Util::Options(defaultMessage) {
     //P4BOX BEGIN
     registerOption("--staticEnforce", nullptr,
                    [this](const char*) { staticEnforce = true; return true; },
-                   "Statically enforce the specified properties");
+                   "Statically enforce a set of specified properties");
 
     registerOption("--emitMonitoredP4", "file",
                    [this](const char* arg) { emitMonitoredP4 = true; emitMonitoredP4File = arg; return true; },
                    "Emit P4box instrumented program as a P4 source");
+    registerOption("--topo-file", "file",
+		   [this](const char* arg) { topoFile = arg; return true; },
+		   "Read a Graphviz DOT file describing a network of P4 devices");
+    registerOption("--ingress-node", "node",
+		   [this](const char* arg) { ingressNode = arg; return true; },
+		   "Set a node to start the static enforcement checking");
+    registerOption("--ingress-port", "port",
+		   [this](const char* arg) { ingressPort = arg; return true; },
+		   "Set an ingress port in an ingress node");
     //P4BOX END
     registerUsage("loglevel format is:\n"
                   "  sourceFile:level,...,sourceFile:level\n"

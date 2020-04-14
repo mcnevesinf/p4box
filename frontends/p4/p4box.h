@@ -13,6 +13,7 @@
 
 //#include "setup.h"
 #include "../common/options.h"
+#include "../common/netMap.h"
 
 #include "createBuiltins.h"
 #include "directCalls.h"
@@ -316,14 +317,20 @@ class CreateModel final : public Inspector {
 
   private:
     SupervisorMap *P4boxIR;
+    NetMap* networkMap;
 
     int nodeCounter;
     int tableCounter;
     int actionCounter;
+    int registerCounter;
     int assertionCounter;
+    int hashCounter;
     std::map<cstring, int> tableIDs;
     std::map<cstring, int> actionIDs;
+    std::map<cstring, int> registerIDs;
+    std::map<cstring, int> registerSize;
     std::map<cstring, int> typedefs;
+    std::vector<std::string> nodeMetaVars;
  
     //Map containing forwarding rules
     //Key : table name
@@ -332,20 +339,20 @@ class CreateModel final : public Inspector {
 
     cstring modelName;
     cstring commandsFile;
+    cstring archType;
     std::string model;
     std::string mainFunctionModel;
     std::string inputDeclaration;
     std::string inputSymbolization;
-    std::string globalDeclarations;
 
-    std::vector<std::string> logicalExpressionList;
+    //std::vector<std::string> logicalExpressionList;
 
     bool pStateOn;
 
     //std::vector<std::string> monitorCalls;
 
     //Need to keep: 	1) monitor name; 2) monitored block; 3) before/after; 
-    // 			4) qualifier (e.g., parser state, extern type); 5) C model
+    // 			4) qualifier (e.g., pasrser state, extern type); 5) C model
     std::vector<MonitorModel> controlBlockMonitorModels;
     std::vector<MonitorModel> parserMonitorModels;
     std::vector<std::string> locals;
@@ -357,47 +364,68 @@ class CreateModel final : public Inspector {
 
     std::string actionListNoRules(const IR::ActionList* actionList);
     std::string actionListWithRules(cstring tableName, const IR::Key* keyList);
+    std::string actionListWithRulesOptimized(cstring tableName, const IR::Key* keyList);
+    std::string addToC(const IR::Add* addExpr);
     std::pair<std::string, std::string> assertionToC(std::string assertString);
+    std::string assign(const IR::AssignmentStatement* assignStatem);
+    std::string assignmentStatemToC(const IR::AssignmentStatement* assignStatem);
     std::string blockStatementToC(IR::BlockStatement body);
     std::string blockStatementToC(const IR::BlockStatement* body);
     std::string constantToC(const IR::Constant* intConst);
     std::string convertExactMatchValue(std::string value);
+    std::string equToC( const IR::Equ* equExpr );
     std::string exprToC(const IR::Expression* expr);
+    std::string externFunctionCall( std::string functionName, 
+			 	    const IR::MethodCallExpression* methodCall,
+				    bool* externFunction );
+    std::string externMethodCall(std::string methodName, 
+				 const IR::MethodCallExpression* methodCall,
+				 bool* externMethod);
+    std::string ifStatementToC(const IR::IfStatement* ifStatem );
     std::string insertAssertionChecks(void);
     std::string insertPreamble(void);
-    std::string methodCallExpressionToC(const IR::MethodCallExpression* methodCall);
-    std::string protectedStructToC(const IR::Type_ProtectedStruct* pstruct);
-    std::string replaceAllOccurrences(std::string oldString, char oldChar, char newChar);
-    std::string stringLiteralToC(const IR::StringLiteral* strLit);
-    std::string assignmentStatemToC(const IR::AssignmentStatement* assignStatem);
+    std::string instantiationToC(const IR::Declaration_Instance* inst);
+    std::string landToC( const IR::LAnd* landExpr );
+    std::string lorToC( const IR::LOr* lorExpr );
     std::string lvalueToC(const IR::Expression* lvalue);
-    std::string assign(const IR::AssignmentStatement* assignStatem);
+    std::string memberToC(const IR::Member* member);
+    std::string methodCallExpressionToC(const IR::MethodCallExpression* methodCall);
+    std::string neqToC( const IR::Neq* neqExpr );
     std::string p4ActionToC(const IR::P4Action* action);
     std::string p4ParserToC(const IR::P4Parser* parser);
     std::string p4TableToC(const IR::P4Table* table);
     std::string pathToC(const IR::PathExpression* pathExpr);
-    std::string memberToC(const IR::Member* member);
+    std::string protectedStructToC(const IR::Type_ProtectedStruct* pstruct);
+    std::string replaceAllOccurrences(std::string oldString, char* oldChar, char* newChar);
+    std::vector<std::string> splitString( std::string str );
+    std::string stringLiteralToC(const IR::StringLiteral* strLit);
+    std::string stringReverse( std::string str );
+    std::string subToC(const IR::Sub* subExpr);
     std::string typeNameToC(const IR::Type_Name* tName);
+    std::string variableToC( const IR::Declaration_Variable* var );
     
     bool isExternal(bool placeholder);
     std::string bitSizeToType( int size );
     std::string klee_make_symbolic(std::string var);
 
   public:
-    CreateModel( const CompilerOptions& options, SupervisorMap *map ){
+    CreateModel( const CompilerOptions& options, SupervisorMap *map, NetMap& networkModelMap ){
         modelName = options.file;
 	commandsFile = options.commandsFile;
+	archType = options.archModel;
         P4boxIR = map;
+	networkMap = &networkModelMap;
 
         nodeCounter = 1;
 	tableCounter = 1;
         actionCounter = 1;
+	registerCounter = 1;
 	assertionCounter = 1;
+        hashCounter = 1;
         mainFunctionModel = "";
         model = "";
 	inputDeclaration = "";
 	inputSymbolization = "void symbolizeInputs(){\n";
-	globalDeclarations = "";
 
 	pStateOn = false;
 
@@ -427,11 +455,11 @@ class ElementModelSetup : public PassManager {
 
   public:
 
-    ElementModelSetup( const CompilerOptions& options, const IR::P4Program auxProgram ){
+    ElementModelSetup( const CompilerOptions& options, const IR::P4Program auxProgram, NetMap& networkModelMap ){
         passes.push_back(new P4::GetProgramDeclarations( &P4box ));
         passes.push_back(new P4::ValidateSupervisor( &P4box ));
         passes.push_back(new P4::GetSupervisorNodes( &P4box ));
-        passes.push_back(new P4::CreateModel( options, &P4box ));
+        passes.push_back(new P4::CreateModel( options, &P4box, networkModelMap ));
 
         std::cout << "Creating element model" << std::endl;
         setName("ElementModelSetup");

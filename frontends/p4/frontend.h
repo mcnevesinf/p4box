@@ -19,6 +19,7 @@ limitations under the License.
 
 #include "ir/ir.h"
 #include "../common/options.h"
+#include "../common/netMap.h"
 
 namespace P4 {
 
@@ -33,7 +34,7 @@ class FrontEnd {
     
     //P4BOX BEGIN
     const IR::P4Program* emitMonitoredP4(const CompilerOptions& options, const IR::P4Program* program);
-    const IR::P4Program* extractModel(const CompilerOptions& options, const IR::P4Program* program);
+    const IR::P4Program* extractModel(const CompilerOptions& options, const IR::P4Program* program, NetMap& networkModelMap);
     //P4BOX END
 };
 

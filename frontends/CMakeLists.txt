@@ -151,6 +151,7 @@ set (COMMON_FRONTEND_HDRS
   common/programMap.h
   common/resolveReferences/referenceMap.h
   common/resolveReferences/resolveReferences.h
+  common/netMap.h
   )
 
 
