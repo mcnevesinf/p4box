@@ -1801,7 +1801,8 @@ void CreateModel::postorder(const IR::P4Parser* parser){
 		if(!networkMap->headersOn){
 		    //inputSymbolization += klee_make_symbolic( paramName );
 		    networkMap->headers = paramName;
-		    inputDeclaration += paramType + " " + paramName + ";\n";
+		    //inputDeclaration += paramType + " " + paramName + ";\n";
+		    networkMap->netwideStructs += paramType + " " + paramName + ";\n";
 		}
 	    }
 	    else{
@@ -2046,7 +2047,7 @@ void CreateModel::end_apply(const IR::Node* node){
 	    networkMap->headersInclude += "\n";
          }
 
-	networkMap->headersInclude += networkMap->netwideStructs;
+	networkMap->headersInclude += networkMap->netwideStructs + "\n";
 
         //Model protected state
         for( auto pstruct : P4boxIR->pStructMap ){
