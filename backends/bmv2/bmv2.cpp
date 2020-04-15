@@ -366,6 +366,9 @@ int main(int argc, char *const argv[]) {
 		netModel += "#include \"" + arch + ".h\"\n";
 	    }
 
+	    //Insert library describing headers
+            netModel += "#include \"headers.h\"\n";
+
 	    netModel += "\n";
 
 	    //Create and call libraries containing node models
@@ -391,13 +394,16 @@ int main(int argc, char *const argv[]) {
 	        }
 
 		for(nodeIter = networkModelMap.nodeIncludeModels.begin(); nodeIter != networkModelMap.nodeIncludeModels.end(); ++nodeIter){
+		    //Include library descibing device model into main file
+		    netModel += "#include \"node_" + nodeIter->first + ".h\"\n";
+
 		    std::string nodeIncludeFileName = "nodeModels/node_" + nodeIter->first + ".h";
     	            std::ofstream nodeIncludeFile;
     	            nodeIncludeFile.open(nodeIncludeFileName);
     	            nodeIncludeFile << nodeIter->second;
     	            nodeIncludeFile.close();
 		}
-	        //netModel += "\n";                
+	        netModel += "\n";                
             }
             else{
                 //TODO: exit properly (i.e., informing the user)

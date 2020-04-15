@@ -424,8 +424,11 @@ class CreateModel final : public Inspector {
 	assertionCounter = 1;
         hashCounter = 1;
         mainFunctionModel = "";
-        model = "";
-	includeModel = "";
+
+        model = "#include \"node_" + networkMap->currentNodeName + ".h\"\n\n";
+
+	includeModel = "#include \"headers.h\"\n\n";
+
 	inputDeclaration = "";
 	inputSymbolization = "void symbolizeInputs(){\n";
 

@@ -2060,8 +2060,10 @@ void CreateModel::end_apply(const IR::Node* node){
 	includeModel += "\n";
     }
 
-    model += inputDeclaration;
-    model += "\n";
+    includeModel += inputDeclaration;
+    includeModel += "\n";
+
+    includeModel += "void nodeModel_" + networkMap->currentNodeName + "();\n\n";
 
     for( auto local : locals ){
         model += local;
