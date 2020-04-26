@@ -295,6 +295,10 @@ int main(int argc, char *const argv[]) {
 	    NetMap networkModelMap;
 	    std::string netModel = "";
 
+	    //Start assertion header file
+            networkModelMap.assertionsInclude += "\n#ifndef P4ASSERT_H\n";
+	    networkModelMap.assertionsInclude += "#define P4ASSERT_H\n\n";
+
             for( vp = boost::vertices(graph); vp.first != vp.second; ++vp.first ){
                 Vertex v = *vp.first;
                 //TODO: remove debug code
@@ -355,6 +359,7 @@ int main(int argc, char *const argv[]) {
 
 	    //custom_dfs_visitor vis(graph, &netModel);
 	    //boost::depth_first_search( graph, boost::visitor(vis).root_vertex(v) );
+	    
 
 	    //Insert preamble
 	    netModel += "#include <stdio.h>\n"; 
@@ -369,6 +374,9 @@ int main(int argc, char *const argv[]) {
 	    //Insert library describing headers
             netModel += "#include \"headers.h\"\n";
 
+	    //Insert library describing assertions
+	    netModel += "#include \"p4assert.h\"\n";
+
 	    netModel += "\n";
 
 	    //Create and call libraries containing node models
@@ -380,6 +388,13 @@ int main(int argc, char *const argv[]) {
 	    	hFile.open(hFileName);
 	    	hFile << networkModelMap.headersInclude;
 	    	hFile.close();
+
+		std::string assertFileName = "nodeModels/p4assert.h";
+		std::ofstream assertFile;
+		assertFile.open(assertFileName);
+		networkModelMap.assertionsInclude += "#endif\n\n";
+		assertFile << networkModelMap.assertionsInclude;
+		assertFile.close();
 
    	        std::map<std::string, std::string>::iterator nodeIter;
 

@@ -429,6 +429,7 @@ class CreateModel final : public Inspector {
 
 	includeModel = "\n#include <stdint.h>\n\n";
         includeModel += "#include \"headers.h\"\n";
+	includeModel += "#include \"p4assert.h\"\n";
 	//TODO: change for different architectures
 	includeModel += "#include \"v1model.h\"\n\n";
 

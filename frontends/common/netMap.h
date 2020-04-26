@@ -12,6 +12,7 @@ class NetMap {
 	headersOn = false;
 	headersInclude = "";
 	std::string netwideStructs = "";
+	assertionsInclude = "";
 
 	p4boxState = "";
 	registerInitializations = "";
@@ -23,6 +24,7 @@ class NetMap {
     bool headersOn;
     std::string headersInclude;
     std::string netwideStructs;
+    std::string assertionsInclude;
 
     std::vector<std::string> archTypes;
     std::map<std::string, std::string> nodeIncludeModels;
