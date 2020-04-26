@@ -427,7 +427,10 @@ class CreateModel final : public Inspector {
 
         model = "#include \"node_" + networkMap->currentNodeName + ".h\"\n\n";
 
-	includeModel = "#include \"headers.h\"\n\n";
+	includeModel = "\n#include <stdint.h>\n\n";
+        includeModel += "#include \"headers.h\"\n";
+	//TODO: change for different architectures
+	includeModel += "#include \"v1model.h\"\n\n";
 
 	inputDeclaration = "";
 	inputSymbolization = "void symbolizeInputs(){\n";
