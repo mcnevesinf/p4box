@@ -2036,6 +2036,9 @@ void CreateModel::end_apply(const IR::Node* node){
     model += "// Headers and metadata\n";
     //Add only once into the model
     if(!networkMap->headersOn){
+	networkMap->headersInclude += "#ifndef HEADER_H\n";
+	networkMap->headersInclude += "#define HEADER_H\n\n";
+	networkMap->headersInclude += "#include <stdint.h>\n\n";
 
         for( auto tdef : modeledStructures.typedefs ){
 	    networkMap->headersInclude += tdef;
@@ -2048,6 +2051,7 @@ void CreateModel::end_apply(const IR::Node* node){
          }
 
 	networkMap->headersInclude += networkMap->netwideStructs + "\n";
+        networkMap->headersInclude += "#endif\n\n";
 
         //Model protected state
         for( auto pstruct : P4boxIR->pStructMap ){
