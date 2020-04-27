@@ -392,7 +392,7 @@ int main(int argc, char *const argv[]) {
 		std::string assertFileName = "nodeModels/p4assert.h";
 		std::ofstream assertFile;
 		assertFile.open(assertFileName);
-		networkModelMap.assertionsInclude += "#endif\n\n";
+		networkModelMap.assertionsInclude += "\n#endif\n\n";
 		assertFile << networkModelMap.assertionsInclude;
 		assertFile.close();
 

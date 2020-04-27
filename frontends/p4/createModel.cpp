@@ -725,7 +725,8 @@ std::pair<std::string, std::string> CreateModel::assertionToC(std::string assert
 			globalVarName += replaceAllOccurrences(left, &dot, &underline) + "_eq_" + 
 					 replaceAllOccurrences(right, &dot, &underline) + "_" + 
 					 std::to_string(assertionCounter);			
-			networkMap->globalDeclarations += "int " + globalVarName + ";\n";
+			//networkMap->globalDeclarations += "int " + globalVarName + ";\n";
+			networkMap->assertionsInclude += "int " + globalVarName + ";\n";
 			assertionModel.second = globalVarName;
 			assertionModel.first = globalVarName + " = (" + left + " == " + right + ");\n\t";
 		}
@@ -748,7 +749,8 @@ std::pair<std::string, std::string> CreateModel::assertionToC(std::string assert
 
 			    std::string globalVarName = "constant_" + replaceAllOccurrences(constantVariable, &dot, &underline) + "_" + std::to_string(assertionCounter);
 			    std::string constantType = "uint64_t"; //TODO: get proper field type
-			    networkMap->globalDeclarations += constantType + " " + globalVarName + ";\n";
+			    //networkMap->globalDeclarations += constantType + " " + globalVarName + ";\n";
+			    networkMap->assertionsInclude += constantType + " " + globalVarName + ";\n";
 
 			    assertionModel.first += globalVarName + " = " + constantVariable + ";";
 			    assertionModel.second += globalVarName + " == " + constantVariable;
